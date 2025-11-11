@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacerdash</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+
+<body>
+    <!-- TELA DE LOGIN -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>📚 Lacerdash</h1>
+                <p>Organize seu aprendizado</p>
+            </div>
+
+            <form id="formLogin" onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label for="nomeUsuario">👤 Seu Nome</label>
+                    <input type="text" id="nomeUsuario" required placeholder="Digite seu nome" autocomplete="off">
+                </div>
+
+                <button type="submit" class="btn-login">🚀 Entrar</button>
+            </form>
+
+            <p class="login-info">Seus dados são salvos localmente no navegador</p>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO -->
+    <div class="modal-overlay hidden" id="modalConfirmacao">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>🚪 Confirmar Saída</h3>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja sair?</p>
+                <p class="modal-info">Seus dados estão salvos e estarão aqui quando você voltar!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-cancelar" onclick="fecharModal()">Cancelar</button>
+                <button class="btn-modal btn-confirmar" onclick="confirmarLogout()">Sim, Sair</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÃO -->
+    <div class="notification" id="notification">✅ Curso adicionado com sucesso!</div>
+
+    <!-- DASHBOARD -->
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1>📚 Lacerdash</h1>
+                    <p>Organize seus cursos e acompanhe seu progresso</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-theme" onclick="toggleTheme()" id="btnTheme">
+                        <span class="theme-icon">🌙</span>
+                        <span class="theme-text">Modo Escuro</span>
+                    </button>
+                    <div class="user-info">
+                        <span class="user-name" id="userName">Usuário</span>
+                        <button class="btn-logout" onclick="fazerLogout()">🚪 Sair</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav">
+            <button class="nav-btn active" onclick="showSection('inicio')">Início</button>
+            <button class="nav-btn" onclick="showSection('cursos')">Meus Cursos</button>
+            <button class="nav-btn" onclick="showSection('trilhas')">Trilhas Sugeridas</button>
+            <button class="nav-btn" onclick="showSection('pomodoro')">⏱️ Pomodoro</button>
+            <button class="nav-btn" onclick="showSection('notas')">📝 Notas</button>
+            <button class="nav-btn" onclick="showSection('ferramentas')">🤖 IA Premium</button>
+            <button class="nav-btn" onclick="showSection('gamificacao')">🏆 Gamificação</button>
+            <button class="nav-btn" onclick="showSection('biblioteca')">📚 Biblioteca</button>
+            <button class="nav-btn" onclick="showSection('ia-assistente')">🧠 IA Assistente</button>
+            <button class="nav-btn" onclick="showSection('certificados')">🎓 Certificados</button>
+            <button class="nav-btn" onclick="showSection('dados')">💾 Dados</button>
+        </div>
+
+        <div class="content">
+            <!-- INÍCIO -->
+            <!-- INÍCIO -->
+            <div id="inicio" class="section active">
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3 id="totalCursos">0</h3>
+                        <p>Total de Cursos</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="cursosAndamento">0</h3>
+                        <p>Em Andamento</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="cursosConcluidos">0</h3>
+                        <p>Concluídos</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="progressoMedio">0%</h3>
+                        <p>Progresso Médio</p>
+                    </div>
+                </div>
+
+                <!-- GRÁFICOS -->
+                <div class="graficos-container">
+                    <div class="grafico-card">
+                        <h3>📊 Distribuição por Categoria</h3>
+                        <canvas id="graficoCategorias"></canvas>
+                    </div>
+
+                    <div class="grafico-card">
+                        <h3>📈 Status dos Cursos</h3>
+                        <canvas id="graficoStatus"></canvas>
+                    </div>
+                </div>
+
+                <div class="grafico-card-wide">
+                    <h3>🎯 Progresso por Curso</h3>
+                    <canvas id="graficoProgresso"></canvas>
+                </div>
+
+                <div class="welcome" id="welcomeMessage">
+                    <h2>Bem-vindo ao seu espaço de aprendizado! 🚀</h2>
+                    <p>Comece adicionando seus primeiros cursos e acompanhe sua evolução.</p>
+                </div>
+            </div>
+
+            <!-- CURSOS -->
+            <div id="cursos" class="section">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="margin: 0; color: #667eea;">📖 Meus Cursos</h2>
+                    <button class="btn-adicionar-curso" onclick="showSection('adicionar')">
+                        ➕ Adicionar Novo Curso
+                    </button>
+                </div>
+                <div class="filtros-container">
+                    <div class="filtro-grupo">
+                        <label>🏷️ Categoria:</label>
+                        <select id="filtrCategoria" onchange="aplicarFiltros()">
+                            <option value="todas">Todas</option>
+                            <option value="Programação">Programação</option>
+                            <option value="Design">Design</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Idiomas">Idiomas</option>
+                            <option value="Negócios">Negócios</option>
+                            <option value="Dados">Dados</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label>📊 Status:</label>
+                        <select id="filtroStatus" onchange="aplicarFiltros()">
+                            <option value="todos">Todos</option>
+                            <option value="em-andamento">Em Andamento</option>
+                            <option value="concluido">Concluído</option>
+                            <option value="pausado">Pausado</option>
+                            <option value="nao-iniciado">Não Iniciado</option>
+                        </select>
+                    </div>
+
+                    <div class="filtro-grupo">
+                        <label>🔍 Buscar:</label>
+                        <input type="text" id="filtroBusca" placeholder="Nome do curso..." oninput="aplicarFiltros()"
+                            autocomplete="off">
+                    </div>
+
+                    <button class="btn-limpar" onclick="limparFiltros()">🔄 Limpar Filtros</button>
+                </div>
+                <div id="listaCursos"></div>
+            </div>
+
+            <!-- ADICIONAR -->
+            <div id="adicionar" class="section">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="margin: 0; color: #667eea;">➕ Adicionar Novo Curso</h2>
+                    <button class="btn-voltar" onclick="showSection('cursos')">
+                        ← Voltar para Meus Cursos
+                    </button>
+                </div>
+
+                <div class="form-container">
+                    <form id="formCurso" onsubmit="adicionarCurso(event)">
+                        <div class="form-group">
+                            <label for="nomeCurso">Nome do Curso *</label>
+                            <input type="text" id="nomeCurso" required placeholder="Ex: JavaScript Avançado"
+                                autocomplete="off">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="categoria">Categoria *</label>
+                            <select id="categoria" required onchange="toggleCategoriaCustom()">
+                                <option value="">Selecione...</option>
+                                <option value="Programação">Programação</option>
+                                <option value="Design">Design</option>
+                                <option value="Marketing">Marketing</option>
+                                <option value="Idiomas">Idiomas</option>
+                                <option value="Negócios">Negócios</option>
+                                <option value="Dados">Dados</option>
+                                <option value="Outros">Outros (personalizar)</option>
+                            </select>
+                            <input type="text" id="categoriaCustom" placeholder="Digite sua categoria..."
+                                autocomplete="off" style="display: none; margin-top: 10px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="status">Status *</label>
+                            <select id="status" required onchange="atualizarProgressoPorStatus()">
+                                <option value="nao-iniciado">Não Iniciado</option>
+                                <option value="em-andamento" selected>Em Andamento</option>
+                                <option value="pausado">Pausado</option>
+                                <option value="concluido">Concluído</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="progresso">Progresso (%)</label>
+                            <input type="number" id="progresso" min="0" max="100" value="0" placeholder="0-100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="anotacoes">Anotações</label>
+                            <textarea id="anotacoes" placeholder="Suas anotações sobre o curso..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="videoaulas">🎥 Videoaulas do YouTube</label>
+                            <div id="listaVideoaulas"></div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <input type="text" id="linkYoutube" placeholder="Cole o link do YouTube aqui..."
+                                    autocomplete="off" style="flex: 1;">
+                                <button type="button" class="btn-add-video" onclick="adicionarVideoaula()">➕
+                                    Adicionar</button>
+                            </div>
+                            <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                                Cole links como: https://www.youtube.com/watch?v=VIDEO_ID
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn-submit">💾 Salvar Curso</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TRILHAS -->
+            <div id="trilhas" class="section">
+                <h2 style="margin-bottom: 20px; color: #667eea;">🎯 Trilhas Sugeridas Para Você</h2>
+
+                <div class="recomendacao-box">
+                    <h3>💡 Com base nos seus cursos</h3>
+                    <div id="recomendacoesPessoais"></div>
+                </div>
+
+                <h3 style="margin: 30px 0 20px 0; color: #fff;">📚 Trilhas Completas</h3>
+                <div id="trilhasCompletas"></div>
+            </div>
+
+            <!-- POMODORO -->
+            <div id="pomodoro" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">⏱️ Timer de Estudo (Pomodoro)</h2>
+
+                <div class="pomodoro-container">
+                    <!-- TIMER PRINCIPAL -->
+                    <div class="pomodoro-timer">
+                        <div class="timer-mode-selector">
+                            <button class="mode-btn active" data-mode="pomodoro" onclick="selecionarModo('pomodoro')">
+                                🍅 Pomodoro
+                            </button>
+                            <button class="mode-btn" data-mode="pausa-curta" onclick="selecionarModo('pausa-curta')">
+                                ☕ Pausa Curta
+                            </button>
+                            <button class="mode-btn" data-mode="pausa-longa" onclick="selecionarModo('pausa-longa')">
+                                🌴 Pausa Longa
+                            </button>
+                        </div>
+
+                        <div class="timer-display" id="timerDisplay">25:00</div>
+
+                        <div class="timer-controls">
+                            <button class="timer-btn btn-start" id="btnStart" onclick="iniciarTimer()">
+                                ▶️ Iniciar
+                            </button>
+                            <button class="timer-btn btn-pause" id="btnPause" onclick="pausarTimer()"
+                                style="display: none;">
+                                ⏸️ Pausar
+                            </button>
+                            <button class="timer-btn btn-reset" onclick="resetarTimer()">
+                                🔄 Resetar
+                            </button>
+                        </div>
+
+                        <div class="timer-info">
+                            <div class="info-item">
+                                <span class="info-label">Sessões Completas:</span>
+                                <span class="info-value" id="sessoesCompletas">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Tempo Total Hoje:</span>
+                                <span class="info-value" id="tempoTotalHoje">0h 0min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONFIGURAÇÕES -->
+                    <div class="pomodoro-config">
+                        <h3>⚙️ Configurações</h3>
+
+                        <div class="config-group">
+                            <label>🍅 Duração Pomodoro (min)</label>
+                            <input type="number" id="duracaoPomodoro" value="25" min="1" max="60"
+                                onchange="salvarConfiguracoes()">
+                        </div>
+
+                        <div class="config-group">
+                            <label>☕ Pausa Curta (min)</label>
+                            <input type="number" id="duracaoPausaCurta" value="5" min="1" max="30"
+                                onchange="salvarConfiguracoes()">
+                        </div>
+
+                        <div class="config-group">
+                            <label>🌴 Pausa Longa (min)</label>
+                            <input type="number" id="duracaoPausaLonga" value="15" min="1" max="60"
+                                onchange="salvarConfiguracoes()">
+                        </div>
+
+                        <div class="config-group">
+                            <label>
+                                <input type="checkbox" id="autoIniciarPausas" onchange="salvarConfiguracoes()">
+                                Auto-iniciar pausas
+                            </label>
+                        </div>
+
+                        <div class="config-group">
+                            <label>
+                                <input type="checkbox" id="notificacoesSom" checked onchange="salvarConfiguracoes()">
+                                Som nas notificações
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTÓRICO -->
+                <div class="pomodoro-historico">
+                    <h3>📊 Histórico de Hoje</h3>
+                    <div id="historicoLista"></div>
+                </div>
+            </div>
+
+            <!-- NOTAS -->
+            <div id="notas" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">📝 Minhas Notas</h2>
+
+                <div class="notas-toolbar">
+                    <button class="btn-nova-nota" onclick="criarNovaNota()">
+                        ➕ Nova Nota
+                    </button>
+                    <div class="notas-search">
+                        <input type="text" id="buscaNotas" placeholder="🔍 Buscar notas..." oninput="buscarNotas()"
+                            autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="notas-container">
+                    <!-- LISTA DE NOTAS -->
+                    <div class="notas-lista">
+                        <div id="listaNotas"></div>
+                    </div>
+
+                    <!-- EDITOR DE NOTA -->
+                    <div class="notas-editor" id="editorNota">
+                        <div class="editor-vazio">
+                            <div class="editor-vazio-icon">📝</div>
+                            <h3>Nenhuma nota selecionada</h3>
+                            <p>Crie uma nova nota ou selecione uma existente</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAMIFICAÇÃO -->
+            <div id="gamificacao" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🏆 Gamificação e Conquistas</h2>
+
+                <!-- PERFIL DO JOGADOR -->
+                <div class="perfil-jogador">
+                    <div class="perfil-avatar">
+                        <div class="avatar-circle">
+                            <span class="avatar-nivel" id="avatarNivel">1</span>
+                        </div>
+                        <h3 id="perfilNome">Iniciante</h3>
+                    </div>
+
+                    <div class="perfil-stats">
+                        <div class="stat-xp">
+                            <div class="stat-header">
+                                <span>⚡ XP: <strong id="xpAtual">0</strong> / <strong id="xpProximo">100</strong></span>
+                                <span class="nivel-badge">Nível <strong id="nivelAtual">1</strong></span>
+                            </div>
+                            <div class="xp-bar">
+                                <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-item-game">
+                                <span class="stat-icon">🔥</span>
+                                <div>
+                                    <div class="stat-value" id="streakDias">0</div>
+                                    <div class="stat-label">Dias Seguidos</div>
+                                </div>
+                            </div>
+                            <div class="stat-item-game">
+                                <span class="stat-icon">🏆</span>
+                                <div>
+                                    <div class="stat-value" id="totalBadges">0</div>
+                                    <div class="stat-label">Conquistas</div>
+                                </div>
+                            </div>
+                            <div class="stat-item-game">
+                                <span class="stat-icon">⭐</span>
+                                <div>
+                                    <div class="stat-value" id="totalPontos">0</div>
+                                    <div class="stat-label">Pontos Totais</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONQUISTAS -->
+                <div class="conquistas-section">
+                    <h3>🏅 Conquistas Desbloqueadas</h3>
+                    <div class="conquistas-grid" id="conquistasGrid"></div>
+                </div>
+
+                <!-- RANKING -->
+                <div class="ranking-section">
+                    <h3>📊 Seus Rankings</h3>
+                    <div class="ranking-cards">
+                        <div class="ranking-card">
+                            <div class="ranking-icon">📚</div>
+                            <h4>Cursos Completados</h4>
+                            <div class="ranking-value" id="rankingCursos">0</div>
+                            <p class="ranking-desc">cursos finalizados</p>
+                        </div>
+                        <div class="ranking-card">
+                            <div class="ranking-icon">⏱️</div>
+                            <h4>Tempo de Estudo</h4>
+                            <div class="ranking-value" id="rankingTempo">0h</div>
+                            <p class="ranking-desc">horas estudadas</p>
+                        </div>
+                        <div class="ranking-card">
+                            <div class="ranking-icon">🎯</div>
+                            <h4>Taxa de Conclusão</h4>
+                            <div class="ranking-value" id="rankingTaxa">0%</div>
+                            <p class="ranking-desc">de progresso médio</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DESAFIOS -->
+                <div class="desafios-section">
+                    <h3>🎯 Desafios da Semana</h3>
+                    <div id="desafiosLista"></div>
+                </div>
+            </div>
+
+            <!-- BIBLIOTECA DE RECURSOS -->
+            <div id="biblioteca" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">📚 Biblioteca de Recursos</h2>
+
+                <div class="biblioteca-toolbar">
+                    <button class="btn-novo-recurso" onclick="abrirModalRecurso()">
+                        ➕ Adicionar Recurso
+                    </button>
+                    <div class="biblioteca-filtros">
+                        <select id="filtroCursoBiblioteca" onchange="filtrarRecursos()">
+                            <option value="todos">Todos os Cursos</option>
+                        </select>
+                        <select id="filtroTipoBiblioteca" onchange="filtrarRecursos()">
+                            <option value="todos">Todos os Tipos</option>
+                            <option value="link">🔗 Links</option>
+                            <option value="pdf">📄 PDFs</option>
+                            <option value="video">🎥 Vídeos</option>
+                            <option value="artigo">📰 Artigos</option>
+                            <option value="outro">📌 Outros</option>
+                        </select>
+                        <input type="text" id="buscaBiblioteca" placeholder="🔍 Buscar recursos..."
+                            oninput="filtrarRecursos()">
+                    </div>
+                </div>
+
+                <div id="listaRecursos"></div>
+
+                <div id="semRecursos" class="empty-state" style="display: none;">
+                    <h3>📚 Nenhum recurso ainda</h3>
+                    <p>Comece adicionando links, PDFs e materiais de estudo!</p>
+                </div>
+            </div>
+
+            <!-- IA ASSISTENTE -->
+            <div id="ia-assistente" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🧠 IA Assistente de Estudos</h2>
+
+                <!-- ANÁLISE DO PERFIL -->
+                <div class="ia-perfil-card">
+                    <div class="ia-perfil-header">
+                        <div class="ia-avatar">🤖</div>
+                        <div>
+                            <h3>Seu Perfil de Aprendizado</h3>
+                            <p>Análise baseada em seus dados e padrões</p>
+                        </div>
+                    </div>
+                    <div class="ia-perfil-stats">
+                        <div class="ia-stat">
+                            <div class="ia-stat-icon">🎯</div>
+                            <div class="ia-stat-info">
+                                <div class="ia-stat-label">Tipo de Aprendiz</div>
+                                <div class="ia-stat-value" id="tipoAprendiz">Analisando...</div>
+                            </div>
+                        </div>
+                        <div class="ia-stat">
+                            <div class="ia-stat-icon">⚡</div>
+                            <div class="ia-stat-info">
+                                <div class="ia-stat-label">Velocidade de Conclusão</div>
+                                <div class="ia-stat-value" id="velocidadeConclusao">Analisando...</div>
+                            </div>
+                        </div>
+                        <div class="ia-stat">
+                            <div class="ia-stat-icon">📊</div>
+                            <div class="ia-stat-info">
+                                <div class="ia-stat-label">Consistência</div>
+                                <div class="ia-stat-value" id="consistencia">Analisando...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RECOMENDAÇÕES PERSONALIZADAS -->
+                <div class="ia-recomendacoes">
+                    <h3>💡 Recomendações Personalizadas</h3>
+                    <div id="iaRecomendacoes"></div>
+                </div>
+
+                <!-- PLANO DE ESTUDOS -->
+                <div class="ia-plano">
+                    <div class="ia-plano-header">
+                        <h3>📅 Seu Plano de Estudos Inteligente</h3>
+                        <button class="btn-gerar-plano" onclick="gerarPlanoEstudos()">
+                            ✨ Gerar Novo Plano
+                        </button>
+                    </div>
+                    <div id="planoEstudos"></div>
+                </div>
+
+                <!-- INSIGHTS E PREVISÕES -->
+                <div class="ia-insights">
+                    <h3>🔮 Insights e Previsões</h3>
+                    <div id="iaInsights"></div>
+                </div>
+
+                <!-- SUGESTÕES DE MELHORIA -->
+                <div class="ia-melhorias">
+                    <h3>🚀 Como Melhorar Seus Estudos</h3>
+                    <div id="iaMelhorias"></div>
+                </div>
+            </div>
+
+            <!-- CERTIFICADOS -->
+            <div id="certificados" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🏆 Meus Certificados</h2>
+
+                <div id="listaCertificados"></div>
+
+                <div id="semCertificados" class="empty-state" style="display: none;">
+                    <h3>🎓 Nenhum certificado ainda</h3>
+                    <p>Complete um curso 100% para desbloquear seu certificado!</p>
+                </div>
+            </div>
+
+            <!-- FERRAMENTAS IA -->
+            <div id="ferramentas" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🤖 Ferramentas IA Premium</h2>
+
+                <div class="ferramentas-grid">
+                    <!-- GERADOR DE RESUMOS -->
+                    <div class="ferramenta-card">
+                        <div class="ferramenta-header">
+                            <div class="ferramenta-icon">📝</div>
+                            <div>
+                                <h3>Gerador de Resumos</h3>
+                                <p>Crie resumos automáticos dos seus textos</p>
+                            </div>
+                        </div>
+
+                        <div class="ferramenta-body">
+                            <textarea id="textoOriginal"
+                                placeholder="Cole aqui o texto que você quer resumir (mínimo 100 caracteres)..."
+                                rows="8" autocomplete="off"></textarea>
+
+                            <div class="ferramenta-config">
+                                <label>
+                                    Tamanho do resumo:
+                                    <select id="tamanhoResumo">
+                                        <option value="curto">Curto (3-5 frases)</option>
+                                        <option value="medio" selected>Médio (5-8 frases)</option>
+                                        <option value="longo">Longo (8-12 frases)</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <button class="btn-ferramenta" onclick="gerarResumo()">
+                                ✨ Gerar Resumo
+                            </button>
+
+                            <div class="resultado-container" id="resultadoResumo" style="display: none;">
+                                <div class="resultado-header">
+                                    <h4>📋 Resumo Gerado:</h4>
+                                    <button class="btn-copiar" onclick="copiarResumo()">📋 Copiar</button>
+                                </div>
+                                <div class="resultado-texto" id="textoResumo"></div>
+                                <button class="btn-salvar-nota" onclick="salvarResumoComoNota()">
+                                    💾 Salvar como Nota
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OCR - EXTRAIR TEXTO DE IMAGEM -->
+                    <div class="ferramenta-card">
+                        <div class="ferramenta-header">
+                            <div class="ferramenta-icon">📷</div>
+                            <div>
+                                <h3>OCR - Extrair Texto</h3>
+                                <p>Extraia texto de imagens e screenshots</p>
+                            </div>
+                        </div>
+
+                        <div class="ferramenta-body">
+                            <div class="upload-area" id="uploadArea"
+                                onclick="document.getElementById('imagemOCR').click()">
+                                <div class="upload-icon">📸</div>
+                                <p>Clique ou arraste uma imagem</p>
+                                <small>Suporta: JPG, PNG, WEBP</small>
+                            </div>
+                            <input type="file" id="imagemOCR" accept="image/*" style="display: none;"
+                                onchange="processarImagemOCR(event)">
+
+                            <div class="preview-container" id="previewContainer" style="display: none;">
+                                <img id="imagemPreview" alt="Preview">
+                            </div>
+
+                            <div class="ocr-progresso" id="ocrProgresso" style="display: none;">
+                                <div class="progresso-barra">
+                                    <div class="progresso-fill" id="ocrProgressoFill"></div>
+                                </div>
+                                <p id="ocrStatus">Processando imagem...</p>
+                            </div>
+
+                            <div class="resultado-container" id="resultadoOCR" style="display: none;">
+                                <div class="resultado-header">
+                                    <h4>📝 Texto Extraído:</h4>
+                                    <button class="btn-copiar" onclick="copiarTextoOCR()">📋 Copiar</button>
+                                </div>
+                                <textarea class="resultado-texto-edit" id="textoOCR" rows="10"
+                                    placeholder="O texto extraído aparecerá aqui..."></textarea>
+                                <button class="btn-salvar-nota" onclick="salvarOCRComoNota()">
+                                    💾 Salvar como Nota
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INFO PREMIUM -->
+                <div class="premium-info">
+                    <div class="premium-badge">✨ PREMIUM</div>
+                    <h3>Ferramentas de IA para turbinar seus estudos</h3>
+                    <ul>
+                        <li>✅ Resumos automáticos inteligentes</li>
+                        <li>✅ OCR em português com alta precisão</li>
+                        <li>✅ Salve resultados diretamente como notas</li>
+                        <li>✅ Processamento 100% local (privacidade total)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- DADOS -->
+            <div id="dados" class="section">
+                <h2 style="margin: 0 0 30px 0; padding: 0; color: #3b82f6; text-align: center;">💾 Gerenciar Dados &
+                    Backup</h2>
+
+                <!-- BACKUP AUTOMÁTICO -->
+                <div class="backup-auto-section">
+                    <div class="backup-auto-card">
+                        <div class="backup-auto-header">
+                            <div>
+                                <h3>🔄 Backup Automático Local</h3>
+                                <p>Crie backups automáticos a cada alteração</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="backupAutoToggle" onchange="toggleBackupAutomatico()">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="backup-auto-info">
+                            <div class="info-item-backup">
+                                <span class="info-label-backup">Último Backup:</span>
+                                <span class="info-value-backup" id="ultimoBackup">Nunca</span>
+                            </div>
+                            <div class="info-item-backup">
+                                <span class="info-label-backup">Backups Salvos:</span>
+                                <span class="info-value-backup" id="totalBackups">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTÓRICO DE VERSÕES -->
+                <div class="versoes-section">
+                    <div class="versoes-header">
+                        <h3>📜 Histórico de Versões</h3>
+                        <button class="btn-limpar-versoes" onclick="limparHistoricoVersoes()">🗑️ Limpar
+                            Histórico</button>
+                    </div>
+                    <div id="listaVersoes"></div>
+                </div>
+
+                <div class="dados-container">
+                    <!-- EXPORTAR -->
+                    <div class="dados-card">
+                        <div class="dados-icon">📤</div>
+                        <h3>Exportar Dados</h3>
+                        <p>Faça backup dos seus cursos</p>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button class="btn-dados btn-exportar" onclick="exportarDados()">
+                                📥 Baixar JSON
+                            </button>
+                            <button class="btn-dados btn-exportar-pdf" onclick="exportarPDF()">
+                                📄 Gerar Relatório PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- IMPORTAR -->
+                    <div class="dados-card">
+                        <div class="dados-icon">📥</div>
+                        <h3>Importar Dados</h3>
+                        <p>Restaure seus cursos de um arquivo JSON</p>
+                        <input type="file" id="fileImport" accept=".json" style="display: none;"
+                            onchange="importarDados(event)">
+                        <button class="btn-dados btn-importar" onclick="document.getElementById('fileImport').click()">
+                            📂 Selecionar Arquivo
+                        </button>
+                    </div>
+
+                    <!-- LIMPAR -->
+                    <div class="dados-card">
+                        <div class="dados-icon">🗑️</div>
+                        <h3>Limpar Todos os Dados</h3>
+                        <p>Remove todos os cursos e configurações</p>
+                        <button class="btn-dados btn-limpar" onclick="confirmarLimparDados()">
+                            ⚠️ Limpar Tudo
+                        </button>
+                    </div>
+
+                    <!-- ESTATÍSTICAS -->
+                    <div class="dados-card">
+                        <div class="dados-icon">📊</div>
+                        <h3>Estatísticas de Armazenamento</h3>
+                        <div class="dados-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total de Cursos:</span>
+                                <span class="stat-value" id="statTotalCursos">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Tamanho dos Dados:</span>
+                                <span class="stat-value" id="statTamanhoDados">0 KB</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Última Atualização:</span>
+                                <span class="stat-value" id="statUltimaAtualizacao">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- INFO -->
+                <div class="dados-info">
+                    <h4>ℹ️ Informações Importantes</h4>
+                    <ul>
+                        <li>Os dados são salvos localmente no seu navegador (localStorage)</li>
+                        <li>Backup automático cria versões a cada alteração importante</li>
+                        <li>Você pode restaurar qualquer versão anterior do histórico</li>
+                        <li>Ao exportar, você cria uma cópia de segurança de todos os seus dados</li>
+                        <li>Limpar dados é irreversível - faça backup antes!</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+
+        <script src="script.js"></script>
+</body>
+
+</html>
