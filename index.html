@@ -69,7 +69,123 @@
                         <span class="theme-text">Modo Escuro</span>
                     </button>
                     <div class="user-info">
-                        <span class="user-name" id="userName">Usuário</span>
+                        <div class="user-profile-dropdown">
+                            <span class="user-name" id="userName" onclick="togglePersonalizacao()">
+                                <span id="userNameText">Usuário</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </span>
+
+                            <!-- DROPDOWN DE PERSONALIZAÇÃO -->
+                            <div class="personalizacao-dropdown hidden" id="personalizacaoDropdown">
+                                <div class="personalizacao-header">
+                                    <h4>🎨 Personalização</h4>
+                                </div>
+
+                                <div class="personalizacao-body">
+                                    <!-- TEMA -->
+                                    <div class="personalizacao-item">
+                                        <label class="personalizacao-label">
+                                            <span class="personalizacao-icon">🎨</span>
+                                            <span>Tema</span>
+                                        </label>
+                                        <div class="theme-selector">
+                                            <button class="theme-option active" data-theme="light"
+                                                onclick="mudarTemaPersonalizado('light')">
+                                                <span>☀️</span>
+                                                Claro
+                                            </button>
+                                            <button class="theme-option" data-theme="dark"
+                                                onclick="mudarTemaPersonalizado('dark')">
+                                                <span>🌙</span>
+                                                Escuro
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- COR PRINCIPAL -->
+                                    <div class="personalizacao-item">
+                                        <label class="personalizacao-label">
+                                            <span class="personalizacao-icon">🎯</span>
+                                            <span>Cor Principal</span>
+                                        </label>
+                                        <div class="color-selector">
+                                            <button class="color-option active" data-color="blue"
+                                                onclick="mudarCorPrincipal('blue')"
+                                                style="background: #3b82f6;"></button>
+                                            <button class="color-option" data-color="purple"
+                                                onclick="mudarCorPrincipal('purple')"
+                                                style="background: #8b5cf6;"></button>
+                                            <button class="color-option" data-color="pink"
+                                                onclick="mudarCorPrincipal('pink')"
+                                                style="background: #ec4899;"></button>
+                                            <button class="color-option" data-color="green"
+                                                onclick="mudarCorPrincipal('green')"
+                                                style="background: #10b981;"></button>
+                                            <button class="color-option" data-color="orange"
+                                                onclick="mudarCorPrincipal('orange')"
+                                                style="background: #f59e0b;"></button>
+                                            <button class="color-option" data-color="red"
+                                                onclick="mudarCorPrincipal('red')"
+                                                style="background: #ef4444;"></button>
+                                        </div>
+                                    </div>
+
+                                    <!-- LAYOUT -->
+                                    <div class="personalizacao-item">
+                                        <label class="personalizacao-label">
+                                            <span class="personalizacao-icon">📐</span>
+                                            <span>Layout Cards</span>
+                                        </label>
+                                        <div class="layout-selector">
+                                            <button class="layout-option active" data-layout="normal"
+                                                onclick="mudarLayout('normal')">
+                                                Normal
+                                            </button>
+                                            <button class="layout-option" data-layout="compacto"
+                                                onclick="mudarLayout('compacto')">
+                                                Compacto
+                                            </button>
+                                            <button class="layout-option" data-layout="detalhado"
+                                                onclick="mudarLayout('detalhado')">
+                                                Detalhado
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- ANIMAÇÕES -->
+                                    <div class="personalizacao-item">
+                                        <label class="personalizacao-label">
+                                            <span class="personalizacao-icon">✨</span>
+                                            <span>Animações</span>
+                                        </label>
+                                        <label class="switch-custom">
+                                            <input type="checkbox" id="animacoesToggle" checked
+                                                onchange="toggleAnimacoes()">
+                                            <span class="slider-custom"></span>
+                                        </label>
+                                    </div>
+
+                                    <!-- EFEITOS VISUAIS -->
+                                    <div class="personalizacao-item">
+                                        <label class="personalizacao-label">
+                                            <span class="personalizacao-icon">🌊</span>
+                                            <span>Efeitos de Fundo</span>
+                                        </label>
+                                        <label class="switch-custom">
+                                            <input type="checkbox" id="efeitosToggle" checked
+                                                onchange="toggleEfeitos()">
+                                            <span class="slider-custom"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="personalizacao-footer">
+                                    <button class="btn-resetar" onclick="resetarPersonalizacao()">
+                                        🔄 Resetar Padrão
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <button class="btn-logout" onclick="fazerLogout()">🚪 Sair</button>
                     </div>
                 </div>
@@ -274,7 +390,8 @@
 
             <!-- POMODORO -->
             <div id="pomodoro" class="section">
-                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">⏱️ Timer de Estudo (Pomodoro)</h2>
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">⏱️ Timer de Estudo (Pomodoro)
+                </h2>
 
                 <div class="pomodoro-container">
                     <!-- TIMER PRINCIPAL -->
@@ -396,7 +513,8 @@
 
             <!-- GAMIFICAÇÃO -->
             <div id="gamificacao" class="section">
-                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🏆 Gamificação e Conquistas</h2>
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🏆 Gamificação e Conquistas
+                </h2>
 
                 <!-- PERFIL DO JOGADOR -->
                 <div class="perfil-jogador">
@@ -517,7 +635,8 @@
 
             <!-- IA ASSISTENTE -->
             <div id="ia-assistente" class="section">
-                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🧠 IA Assistente de Estudos</h2>
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🧠 IA Assistente de Estudos
+                </h2>
 
                 <!-- ANÁLISE DO PERFIL -->
                 <div class="ia-perfil-card">

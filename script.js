@@ -13,10 +13,11 @@ function verificarLogin() {
         mostrarTelaLogin();
     } else {
         esconderTelaLogin();
-        document.getElementById('userName').textContent = usuarioAtual;
+        document.getElementById('userNameText').textContent = usuarioAtual;
         carregarDados();
         atualizarEstatisticas();
         carregarTemaPreferido();
+        carregarPersonalizacoes();
     }
 }
 
@@ -37,12 +38,13 @@ function fazerLogin(event) {
         usuarioAtual = nome;
         localStorage.setItem('usuarioLogado', nome);
 
-        document.getElementById('userName').textContent = nome;
+        document.getElementById('userNameText').textContent = nome;
         esconderTelaLogin();
 
         carregarDados();
         atualizarEstatisticas();
         carregarTemaPreferido();
+        carregarPersonalizacoes();
 
         mostrarNotificacao(`🎉 Bem-vindo, ${nome}!`);
     }
@@ -4506,3 +4508,234 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 });
 
 console.log('🎨 Efeitos visuais carregados com sucesso!');
+
+// ============================================
+// SISTEMA DE PERSONALIZAÇÃO AVANÇADA
+// ============================================
+
+let personalizacoes = {
+    tema: 'light',
+    cor: 'blue',
+    layout: 'normal',
+    animacoes: true,
+    efeitos: true
+};
+
+// Toggle dropdown de personalização
+function togglePersonalizacao() {
+    const dropdown = document.getElementById('personalizacaoDropdown');
+    
+    // CRÍTICO: Move o dropdown para fora do header (body)
+    if (dropdown.parentElement.id !== 'body-dropdown-container') {
+        const container = document.createElement('div');
+        container.id = 'body-dropdown-container';
+        container.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999999;';
+        document.body.appendChild(container);
+        container.appendChild(dropdown);
+        dropdown.style.pointerEvents = 'all';
+    }
+    
+    dropdown.classList.toggle('show');
+    dropdown.classList.toggle('hidden');
+}
+
+// Carregar personalizações salvas
+function carregarPersonalizacoes() {
+    if (!usuarioAtual) return;
+    
+    const chave = `personalizacoes_${usuarioAtual}`;
+    const dados = localStorage.getItem(chave);
+    
+    if (dados) {
+        personalizacoes = JSON.parse(dados);
+        aplicarPersonalizacoes();
+    }
+}
+
+// Salvar personalizações
+function salvarPersonalizacoes() {
+    if (!usuarioAtual) return;
+    
+    const chave = `personalizacoes_${usuarioAtual}`;
+    localStorage.setItem(chave, JSON.stringify(personalizacoes));
+}
+
+// Aplicar personalizações
+function aplicarPersonalizacoes() {
+    // Aplicar tema
+    document.documentElement.setAttribute('data-theme', personalizacoes.tema);
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === personalizacoes.tema) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Aplicar cor
+    document.body.setAttribute('data-color', personalizacoes.cor);
+    document.querySelectorAll('.color-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.color === personalizacoes.cor) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Aplicar layout
+    document.body.setAttribute('data-layout', personalizacoes.layout);
+    document.querySelectorAll('.layout-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.layout === personalizacoes.layout) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Aplicar animações
+    if (document.getElementById('animacoesToggle')) {
+        document.getElementById('animacoesToggle').checked = personalizacoes.animacoes;
+    }
+    if (!personalizacoes.animacoes) {
+        document.body.classList.add('no-animations');
+    } else {
+        document.body.classList.remove('no-animations');
+    }
+    
+    // Aplicar efeitos
+    if (document.getElementById('efeitosToggle')) {
+        document.getElementById('efeitosToggle').checked = personalizacoes.efeitos;
+    }
+    if (!personalizacoes.efeitos) {
+        document.body.classList.add('no-effects');
+    } else {
+        document.body.classList.remove('no-effects');
+    }
+    
+    // Atualizar cores principais
+    aplicarCorPrincipal(personalizacoes.cor);
+}
+
+// Mudar tema
+function mudarTemaPersonalizado(tema) {
+    personalizacoes.tema = tema;
+    document.documentElement.setAttribute('data-theme', tema);
+    
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === tema) {
+            btn.classList.add('active');
+        }
+    });
+    
+    salvarPersonalizacoes();
+    atualizarGraficos();
+    
+    const mensagem = tema === 'dark' ? '🌙 Tema escuro ativado' : '☀️ Tema claro ativado';
+    mostrarNotificacao(mensagem);
+}
+
+// Mudar cor principal
+function mudarCorPrincipal(cor) {
+    personalizacoes.cor = cor;
+    document.body.setAttribute('data-color', cor);
+    
+    document.querySelectorAll('.color-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.color === cor) {
+            btn.classList.add('active');
+        }
+    });
+    
+    aplicarCorPrincipal(cor);
+    salvarPersonalizacoes();
+    mostrarNotificacao('🎨 Cor alterada!');
+}
+
+// Aplicar cor principal (CSS vars)
+function aplicarCorPrincipal(cor) {
+    const cores = {
+        blue: { primary: '#3b82f6', secondary: '#2563eb' },
+        purple: { primary: '#8b5cf6', secondary: '#7c3aed' },
+        pink: { primary: '#ec4899', secondary: '#db2777' },
+        green: { primary: '#10b981', secondary: '#059669' },
+        orange: { primary: '#f59e0b', secondary: '#d97706' },
+        red: { primary: '#ef4444', secondary: '#dc2626' }
+    };
+    
+    const corSelecionada = cores[cor];
+    document.documentElement.style.setProperty('--color-primary', corSelecionada.primary);
+    document.documentElement.style.setProperty('--color-secondary', corSelecionada.secondary);
+}
+
+// Mudar layout
+function mudarLayout(layout) {
+    personalizacoes.layout = layout;
+    document.body.setAttribute('data-layout', layout);
+    
+    document.querySelectorAll('.layout-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.layout === layout) {
+            btn.classList.add('active');
+        }
+    });
+    
+    salvarPersonalizacoes();
+    
+    const mensagens = {
+        normal: '📐 Layout normal',
+        compacto: '📐 Layout compacto',
+        detalhado: '📐 Layout detalhado'
+    };
+    mostrarNotificacao(mensagens[layout]);
+}
+
+// Toggle animações
+function toggleAnimacoes() {
+    personalizacoes.animacoes = document.getElementById('animacoesToggle').checked;
+    
+    if (personalizacoes.animacoes) {
+        document.body.classList.remove('no-animations');
+        mostrarNotificacao('✨ Animações ativadas');
+    } else {
+        document.body.classList.add('no-animations');
+        mostrarNotificacao('⏸️ Animações desativadas');
+    }
+    
+    salvarPersonalizacoes();
+}
+
+// Toggle efeitos
+function toggleEfeitos() {
+    personalizacoes.efeitos = document.getElementById('efeitosToggle').checked;
+    
+    if (personalizacoes.efeitos) {
+        document.body.classList.remove('no-effects');
+        mostrarNotificacao('🌊 Efeitos ativados');
+    } else {
+        document.body.classList.add('no-effects');
+        mostrarNotificacao('⏸️ Efeitos desativados');
+    }
+    
+    salvarPersonalizacoes();
+}
+
+// Resetar personalização
+function resetarPersonalizacao() {
+    if (!confirm('Deseja resetar todas as personalizações para o padrão?')) return;
+    
+    personalizacoes = {
+        tema: 'light',
+        cor: 'blue',
+        layout: 'normal',
+        animacoes: true,
+        efeitos: true
+    };
+    
+    aplicarPersonalizacoes();
+    salvarPersonalizacoes();
+    
+    mostrarNotificacao('🔄 Personalização resetada!');
+}
+
+// Carregar personalizações ao fazer login
+carregarPersonalizacoes();
+
+console.log('🎨 Sistema de personalização carregado!');
