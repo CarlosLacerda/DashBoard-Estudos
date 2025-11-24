@@ -203,6 +203,7 @@
             <button class="nav-btn" onclick="showSection('biblioteca')">📚 Biblioteca</button>
             <button class="nav-btn" onclick="showSection('ia-assistente')">🧠 IA Assistente</button>
             <button class="nav-btn" onclick="showSection('certificados')">🎓 Certificados</button>
+            <button class="nav-btn" onclick="showSection('financeiro')">💰 Financeiro</button>
             <button class="nav-btn" onclick="showSection('dados')">💾 Dados</button>
         </div>
 
@@ -818,6 +819,86 @@
                         <li>✅ Salve resultados diretamente como notas</li>
                         <li>✅ Processamento 100% local (privacidade total)</li>
                     </ul>
+                </div>
+            </div>
+
+            <!-- FINANCEIRO -->
+            <div id="financeiro" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">💰 Gestão Financeira de Cursos</h2>
+
+                <!-- RESUMO FINANCEIRO -->
+                <div class="financeiro-resumo">
+                    <div class="financeiro-card">
+                        <div class="financeiro-icon">💵</div>
+                        <div class="financeiro-info">
+                            <div class="financeiro-label">Total Investido</div>
+                            <div class="financeiro-valor" id="totalInvestido">R$ 0,00</div>
+                        </div>
+                    </div>
+
+                    <div class="financeiro-card">
+                        <div class="financeiro-icon">✅</div>
+                        <div class="financeiro-info">
+                            <div class="financeiro-label">Cursos Concluídos</div>
+                            <div class="financeiro-valor" id="totalConcluidos">0</div>
+                        </div>
+                    </div>
+
+                    <div class="financeiro-card">
+                        <div class="financeiro-icon">📊</div>
+                        <div class="financeiro-info">
+                            <div class="financeiro-label">ROI Médio</div>
+                            <div class="financeiro-valor" id="roiMedio">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="financeiro-card">
+                        <div class="financeiro-icon">🛒</div>
+                        <div class="financeiro-info">
+                            <div class="financeiro-label">Na Wishlist</div>
+                            <div class="financeiro-valor" id="totalWishlist">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AÇÕES -->
+                <div class="financeiro-acoes">
+                    <button class="btn-financeiro btn-adicionar-valor" onclick="abrirModalValorCurso()">
+                        💵 Adicionar Valores aos Cursos
+                    </button>
+                    <button class="btn-financeiro btn-wishlist" onclick="abrirModalWishlist()">
+                        🛒 Gerenciar Wishlist
+                    </button>
+                    <button class="btn-financeiro btn-nota-fiscal" onclick="gerarNotaFiscal()">
+                        📄 Emitir Nota Fiscal
+                    </button>
+                </div>
+
+                <!-- GRÁFICO DE GASTOS -->
+                <div class="grafico-card-wide">
+                    <h3>💰 Gastos por Categoria</h3>
+                    <canvas id="graficoGastos"></canvas>
+                </div>
+
+                <!-- LISTA DE CURSOS COM VALORES -->
+                <div class="cursos-financeiros">
+                    <h3>📚 Cursos Adquiridos</h3>
+                    <div id="listaCursosFinanceiros"></div>
+                </div>
+
+                <!-- WISHLIST -->
+                <div class="wishlist-section">
+                    <div class="wishlist-header">
+                        <h3>🛒 Minha Wishlist</h3>
+                        <button class="btn-add-wishlist" onclick="abrirModalWishlist()">➕ Adicionar</button>
+                    </div>
+                    <div id="listaWishlist"></div>
+                </div>
+
+                <!-- ALERTAS DE PROMOÇÃO -->
+                <div class="alertas-section">
+                    <h3>🔔 Alertas de Promoção</h3>
+                    <div id="listaAlertas"></div>
                 </div>
             </div>
 

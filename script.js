@@ -4739,3 +4739,676 @@ function resetarPersonalizacao() {
 carregarPersonalizacoes();
 
 console.log('🎨 Sistema de personalização carregado!');
+
+// ============================================
+// SISTEMA FINANCEIRO DE CURSOS
+// ============================================
+let dadosFinanceiros = {
+    cursosComprados: [], // { cursoId, valor, dataCompra, roi }
+    wishlist: [], // { id, nome, preco, link, dataAdicao }
+    alertas: []
+};
+
+let graficoGastosChart = null;
+
+// Carregar dados financeiros
+function carregarDadosFinanceiros() {
+    if (!usuarioAtual) return;
+    
+    const chave = `financeiro_${usuarioAtual}`;
+    const dados = localStorage.getItem(chave);
+    
+    if (dados) {
+        dadosFinanceiros = JSON.parse(dados);
+    }
+    
+    renderizarFinanceiro();
+}
+
+// Salvar dados financeiros
+function salvarDadosFinanceiros() {
+    if (!usuarioAtual) return;
+    
+    const chave = `financeiro_${usuarioAtual}`;
+    localStorage.setItem(chave, JSON.stringify(dadosFinanceiros));
+}
+
+// Renderizar seção financeira
+function renderizarFinanceiro() {
+    atualizarResumoFinanceiro();
+    renderizarListaCursosFinanceiros();
+    renderizarWishlist();
+    renderizarAlertas();
+    criarGraficoGastos();
+}
+
+// Atualizar resumo financeiro
+function atualizarResumoFinanceiro() {
+    const totalInvestido = dadosFinanceiros.cursosComprados.reduce((acc, c) => acc + c.valor, 0);
+    const concluidos = dadosFinanceiros.cursosComprados.filter(c => {
+        const curso = cursos.find(cr => cr.id === c.cursoId);
+        return curso && curso.status === 'concluido';
+    }).length;
+    
+    const roiMedio = dadosFinanceiros.cursosComprados.length > 0
+        ? Math.round(dadosFinanceiros.cursosComprados.reduce((acc, c) => acc + (c.roi || 0), 0) / dadosFinanceiros.cursosComprados.length)
+        : 0;
+    
+    document.getElementById('totalInvestido').textContent = `R$ ${totalInvestido.toFixed(2).replace('.', ',')}`;
+    document.getElementById('totalConcluidos').textContent = concluidos;
+    document.getElementById('roiMedio').textContent = `${roiMedio}%`;
+    document.getElementById('totalWishlist').textContent = dadosFinanceiros.wishlist.length;
+}
+
+// Abrir modal para adicionar valores aos cursos
+function abrirModalValorCurso() {
+    if (cursos.length === 0) {
+        mostrarNotificacao('❌ Adicione cursos primeiro!');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-financeiro show';
+    modal.id = 'modalValorCurso';
+    
+    const cursosSelect = cursos.map(c => {
+        const jaTemValor = dadosFinanceiros.cursosComprados.find(cf => cf.cursoId === c.id);
+        return `<option value="${c.id}">${c.nome} ${jaTemValor ? '✓' : ''}</option>`;
+    }).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-financeiro-content">
+            <div class="modal-financeiro-header">
+                <h3>💵 Adicionar Valor ao Curso</h3>
+            </div>
+            
+            <div class="modal-financeiro-body">
+                <form id="formValorCurso" onsubmit="salvarValorCurso(event)">
+                    <div class="form-group">
+                        <label>Curso *</label>
+                        <select id="cursoFinanceiroSelect" required>
+                            <option value="">Selecione...</option>
+                            ${cursosSelect}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Valor Pago (R$) *</label>
+                        <input type="number" id="valorCurso" required min="0" step="0.01" 
+                               placeholder="Ex: 199.90">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Data da Compra *</label>
+                        <input type="date" id="dataCompraCurso" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>ROI Estimado (%)</label>
+                        <input type="number" id="roiCurso" min="0" max="1000" 
+                               placeholder="Ex: 300 (significa 300% de retorno)">
+                        <small style="color: var(--text-secondary); display: block; margin-top: 5px;">
+                            Deixe em branco se não souber
+                        </small>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-financeiro-footer">
+                <button class="btn-modal btn-cancelar" onclick="fecharModalFinanceiro()">Cancelar</button>
+                <button class="btn-modal btn-confirmar" onclick="document.getElementById('formValorCurso').requestSubmit()">
+                    Salvar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Definir data de hoje como padrão
+    document.getElementById('dataCompraCurso').valueAsDate = new Date();
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) fecharModalFinanceiro();
+    });
+}
+
+// Salvar valor do curso
+function salvarValorCurso(event) {
+    event.preventDefault();
+    
+    const cursoId = parseInt(document.getElementById('cursoFinanceiroSelect').value);
+    const valor = parseFloat(document.getElementById('valorCurso').value);
+    const dataCompra = document.getElementById('dataCompraCurso').value;
+    const roi = parseInt(document.getElementById('roiCurso').value) || 0;
+    
+    // Verificar se já existe
+    const index = dadosFinanceiros.cursosComprados.findIndex(c => c.cursoId === cursoId);
+    
+    if (index >= 0) {
+        // Atualizar
+        dadosFinanceiros.cursosComprados[index] = {
+            cursoId,
+            valor,
+            dataCompra,
+            roi
+        };
+        mostrarNotificacao('✅ Valor atualizado!');
+    } else {
+        // Adicionar novo
+        dadosFinanceiros.cursosComprados.push({
+            cursoId,
+            valor,
+            dataCompra,
+            roi
+        });
+        mostrarNotificacao('✅ Valor adicionado!');
+    }
+    
+    salvarDadosFinanceiros();
+    fecharModalFinanceiro();
+    renderizarFinanceiro();
+}
+
+// Fechar modal financeiro
+function fecharModalFinanceiro() {
+    const modal = document.getElementById('modalValorCurso') || 
+                  document.getElementById('modalWishlist') || 
+                  document.getElementById('modalNotaFiscal');
+    if (modal) modal.remove();
+}
+
+// Renderizar lista de cursos financeiros
+function renderizarListaCursosFinanceiros() {
+    const container = document.getElementById('listaCursosFinanceiros');
+    
+    if (dadosFinanceiros.cursosComprados.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">Nenhum valor adicionado ainda</p>';
+        return;
+    }
+    
+    container.innerHTML = dadosFinanceiros.cursosComprados.map(cf => {
+        const curso = cursos.find(c => c.id === cf.cursoId);
+        if (!curso) return '';
+        
+        const roiClass = cf.roi > 100 ? 'roi-positivo' : 'roi-negativo';
+        
+        return `
+            <div class="curso-financeiro-item">
+                <div class="curso-financeiro-info">
+                    <div class="curso-financeiro-nome">${curso.nome}</div>
+                    <div class="curso-financeiro-detalhes">
+                        📅 Comprado em ${new Date(cf.dataCompra).toLocaleDateString('pt-BR')} • 
+                        ${curso.categoria}
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="curso-financeiro-valor">
+                        R$ ${cf.valor.toFixed(2).replace('.', ',')}
+                    </div>
+                    ${cf.roi > 0 ? `
+                        <span class="curso-financeiro-roi ${roiClass}">
+                            ROI: ${cf.roi}%
+                        </span>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Abrir modal wishlist
+function abrirModalWishlist() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-financeiro show';
+    modal.id = 'modalWishlist';
+    
+    modal.innerHTML = `
+        <div class="modal-financeiro-content">
+            <div class="modal-financeiro-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h3>🛒 Adicionar à Wishlist</h3>
+            </div>
+            
+            <div class="modal-financeiro-body">
+                <form id="formWishlist" onsubmit="salvarWishlist(event)">
+                    <div class="form-group">
+                        <label>Nome do Curso *</label>
+                        <input type="text" id="nomeWishlist" required 
+                               placeholder="Ex: Master em Python" autocomplete="off">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Preço (R$) *</label>
+                        <input type="number" id="precoWishlist" required min="0" step="0.01" 
+                               placeholder="Ex: 499.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Link do Curso</label>
+                        <input type="url" id="linkWishlist" 
+                               placeholder="https://..." autocomplete="off">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Plataforma</label>
+                        <input type="text" id="plataformaWishlist" 
+                               placeholder="Ex: Udemy, Alura, Rocketseat" autocomplete="off">
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-financeiro-footer">
+                <button class="btn-modal btn-cancelar" onclick="fecharModalFinanceiro()">Cancelar</button>
+                <button class="btn-modal btn-confirmar" onclick="document.getElementById('formWishlist').requestSubmit()">
+                    Adicionar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) fecharModalFinanceiro();
+    });
+}
+
+// Salvar item na wishlist
+function salvarWishlist(event) {
+    event.preventDefault();
+    
+    const item = {
+        id: Date.now(),
+        nome: document.getElementById('nomeWishlist').value.trim(),
+        preco: parseFloat(document.getElementById('precoWishlist').value),
+        link: document.getElementById('linkWishlist').value.trim(),
+        plataforma: document.getElementById('plataformaWishlist').value.trim(),
+        dataAdicao: new Date().toISOString()
+    };
+    
+    dadosFinanceiros.wishlist.push(item);
+    salvarDadosFinanceiros();
+    fecharModalFinanceiro();
+    renderizarFinanceiro();
+    
+    mostrarNotificacao('✅ Adicionado à wishlist!');
+}
+
+// Renderizar wishlist
+function renderizarWishlist() {
+    const container = document.getElementById('listaWishlist');
+    
+    if (dadosFinanceiros.wishlist.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">Sua wishlist está vazia</p>';
+        return;
+    }
+    
+    container.innerHTML = dadosFinanceiros.wishlist.map(item => `
+        <div class="wishlist-item">
+            <div class="wishlist-item-info">
+                <div class="wishlist-item-nome">${item.nome}</div>
+                <div class="wishlist-item-preco">
+                    💰 R$ ${item.preco.toFixed(2).replace('.', ',')}
+                    ${item.plataforma ? ` • 📍 ${item.plataforma}` : ''}
+                </div>
+            </div>
+            <div class="wishlist-item-acoes">
+                ${item.link ? `
+                    <button class="btn-wishlist-acao btn-comprar" onclick="window.open('${item.link}', '_blank')">
+                        🔗 Abrir
+                    </button>
+                ` : ''}
+                <button class="btn-wishlist-acao btn-comprar" onclick="comprarDaWishlist(${item.id})">
+                    ✅ Comprei
+                </button>
+                <button class="btn-wishlist-acao btn-remover-wishlist" onclick="removerDaWishlist(${item.id})">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Comprar da wishlist
+function comprarDaWishlist(itemId) {
+    const item = dadosFinanceiros.wishlist.find(w => w.id === itemId);
+    if (!item) return;
+    
+    if (!confirm(`Marcar "${item.nome}" como comprado e adicionar aos cursos?`)) return;
+    
+    // Criar curso
+    const novoCurso = {
+        id: Date.now(),
+        nome: item.nome,
+        categoria: 'Outros',
+        status: 'nao-iniciado',
+        progresso: 0,
+        anotacoes: `Comprado da wishlist por R$ ${item.preco.toFixed(2)}`,
+        videoaulas: [],
+        dataInicio: new Date().toLocaleDateString('pt-BR'),
+        dataUltimaAtualizacao: new Date().toLocaleDateString('pt-BR')
+    };
+    
+    cursos.push(novoCurso);
+    salvarDados();
+    
+    // Adicionar valor financeiro
+    dadosFinanceiros.cursosComprados.push({
+        cursoId: novoCurso.id,
+        valor: item.preco,
+        dataCompra: new Date().toISOString().split('T')[0],
+        roi: 0
+    });
+    
+    // Remover da wishlist
+    dadosFinanceiros.wishlist = dadosFinanceiros.wishlist.filter(w => w.id !== itemId);
+    
+    salvarDadosFinanceiros();
+    renderizarFinanceiro();
+    atualizarEstatisticas();
+    
+    mostrarNotificacao('✅ Curso adicionado e removido da wishlist!');
+}
+
+// Remover da wishlist
+function removerDaWishlist(itemId) {
+    const item = dadosFinanceiros.wishlist.find(w => w.id === itemId);
+    if (!item) return;
+    
+    if (!confirm(`Remover "${item.nome}" da wishlist?`)) return;
+    
+    dadosFinanceiros.wishlist = dadosFinanceiros.wishlist.filter(w => w.id !== itemId);
+    salvarDadosFinanceiros();
+    renderizarFinanceiro();
+    
+    mostrarNotificacao('🗑️ Removido da wishlist!');
+}
+
+// Renderizar alertas (simulado)
+function renderizarAlertas() {
+    const container = document.getElementById('listaAlertas');
+    
+    // Gerar alertas automáticos baseado na wishlist
+    const alertas = [];
+    
+    dadosFinanceiros.wishlist.forEach(item => {
+        // Simular desconto aleatório (em produção, você integraria com APIs reais)
+        if (Math.random() > 0.7) {
+            const desconto = Math.floor(Math.random() * 50) + 10;
+            alertas.push({
+                titulo: `🔥 ${item.nome} com ${desconto}% OFF!`,
+                descricao: `De R$ ${item.preco.toFixed(2)} por R$ ${(item.preco * (1 - desconto/100)).toFixed(2)}`,
+                link: item.link
+            });
+        }
+    });
+    
+    if (alertas.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">Nenhuma promoção ativa no momento</p>';
+        return;
+    }
+    
+    container.innerHTML = alertas.map(alerta => `
+        <div class="alerta-item">
+            <div class="alerta-icon">🎉</div>
+            <div class="alerta-info">
+                <div class="alerta-titulo">${alerta.titulo}</div>
+                <div class="alerta-descricao">${alerta.descricao}</div>
+            </div>
+            ${alerta.link ? `
+                <button class="btn-wishlist-acao btn-comprar" onclick="window.open('${alerta.link}', '_blank')">
+                    Ver Oferta
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// Gerar nota fiscal
+function gerarNotaFiscal() {
+    if (dadosFinanceiros.cursosComprados.length === 0) {
+        mostrarNotificacao('❌ Adicione valores aos cursos primeiro!');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.display = 'flex';
+    modal.id = 'modalNotaFiscal';
+    
+    const numeroNF = `NF-${Date.now()}`;
+    const dataEmissao = new Date().toLocaleDateString('pt-BR');
+    const horaEmissao = new Date().toLocaleTimeString('pt-BR');
+    
+    const totalGeral = dadosFinanceiros.cursosComprados.reduce((acc, c) => acc + c.valor, 0);
+    
+    const linhasTabela = dadosFinanceiros.cursosComprados.map((cf, index) => {
+        const curso = cursos.find(c => c.id === cf.cursoId);
+        if (!curso) return '';
+        
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${curso.nome}</td>
+                <td>${curso.categoria}</td>
+                <td style="text-align: right;">R$ ${cf.valor.toFixed(2).replace('.', ',')}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    modal.innerHTML = `
+        <div class="modal-container" style="max-width: 850px;">
+            <div class="nota-fiscal-container" id="notaFiscalParaDownload">
+                <div class="nota-fiscal-header">
+                    <h2>📄 NOTA FISCAL DE SERVIÇO</h2>
+                    <div class="nota-fiscal-numero">Nº ${numeroNF}</div>
+                </div>
+                
+                <div class="nota-fiscal-body">
+                    <div class="nota-fiscal-info">
+                        <div>
+                            <div class="nota-fiscal-campo">
+                                <div class="nota-fiscal-label">EMITENTE</div>
+                                <div class="nota-fiscal-valor-campo">Lacerdash</div>
+                            </div>
+                            <div class="nota-fiscal-campo">
+                                <div class="nota-fiscal-label">CNPJ</div>
+                                <div class="nota-fiscal-valor-campo">00.000.000/0001-00</div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="nota-fiscal-campo">
+                                <div class="nota-fiscal-label">CLIENTE</div>
+                                <div class="nota-fiscal-valor-campo">${usuarioAtual}</div>
+                            </div>
+                            <div class="nota-fiscal-campo">
+                                <div class="nota-fiscal-label">DATA DE EMISSÃO</div>
+                                <div class="nota-fiscal-valor-campo">${dataEmissao} ${horaEmissao}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table class="nota-fiscal-tabela">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Curso</th>
+                                <th>Categoria</th>
+                                <th style="text-align: right;">Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${linhasTabela}
+                        </tbody>
+                    </table>
+                    
+                    <div class="nota-fiscal-total">
+                        <div class="nota-fiscal-total-label">VALOR TOTAL</div>
+                        <div class="nota-fiscal-total-valor">R$ ${totalGeral.toFixed(2).replace('.', ',')}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 20px; background: var(--bg-secondary);">
+                <button class="btn-modal btn-cancelar" onclick="fecharModalFinanceiro()">Fechar</button>
+                <button class="btn-modal btn-confirmar" onclick="baixarNotaFiscal()">
+                    📥 Baixar PDF
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) fecharModalFinanceiro();
+    });
+}
+
+// Baixar nota fiscal como PDF
+async function baixarNotaFiscal() {
+    mostrarNotificacao('📄 Gerando nota fiscal...');
+    
+    try {
+        const elemento = document.getElementById('notaFiscalParaDownload');
+        
+        // Importar html2canvas se necessário
+        if (typeof html2canvas === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            document.head.appendChild(script);
+            
+            await new Promise(resolve => {
+                script.onload = resolve;
+            });
+        }
+        
+        const canvas = await html2canvas(elemento, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            logging: false
+        });
+        
+        // Converter para imagem e baixar
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `nota-fiscal-${Date.now()}.png`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            mostrarNotificacao('✅ Nota fiscal baixada!');
+        });
+        
+    } catch (error) {
+        console.error('Erro ao gerar nota fiscal:', error);
+        mostrarNotificacao('❌ Erro ao gerar nota fiscal!');
+    }
+}
+
+// Criar gráfico de gastos
+function criarGraficoGastos() {
+    const ctx = document.getElementById('graficoGastos');
+    if (!ctx) return;
+    
+    if (dadosFinanceiros.cursosComprados.length === 0) {
+        if (graficoGastosChart) {
+            graficoGastosChart.destroy();
+            graficoGastosChart = null;
+        }
+        return;
+    }
+    
+    // Agrupar por categoria
+    const gastosPorCategoria = {};
+    dadosFinanceiros.cursosComprados.forEach(cf => {
+        const curso = cursos.find(c => c.id === cf.cursoId);
+        if (curso) {
+            gastosPorCategoria[curso.categoria] = (gastosPorCategoria[curso.categoria] || 0) + cf.valor;
+        }
+    });
+    
+    const labels = Object.keys(gastosPorCategoria);
+    const data = Object.values(gastosPorCategoria);
+    
+    const cores = [
+        '#10b981', '#3b82f6', '#f59e0b', '#ec4899',
+        '#8b5cf6', '#06b6d4', '#f97316', '#84cc16'
+    ];
+    
+    if (graficoGastosChart) {
+        graficoGastosChart.destroy();
+    }
+    
+    graficoGastosChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Investimento (R$)',
+                data: data,
+                backgroundColor: cores,
+                borderRadius: 8,
+                barThickness: 40
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `R$ ${context.parsed.y.toFixed(2).replace('.', ',')}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toFixed(0);
+                        },
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-secondary').trim()
+                    },
+                    grid: {
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--border-color').trim()
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-primary').trim()
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Integrar com showSection
+const originalShowSection11 = showSection;
+showSection = function(sectionId) {
+    originalShowSection11.call(this, sectionId);
+    
+    if (sectionId === 'financeiro') {
+        carregarDadosFinanceiros();
+    }
+};
+
+// Carregar ao fazer login
+carregarDadosFinanceiros();
+
+console.log('💰 Sistema Financeiro carregado!');
