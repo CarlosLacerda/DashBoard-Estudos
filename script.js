@@ -1,9 +1,82 @@
+
+
+// ⬇️ ADICIONE ESTAS LINHAS AQUI (APÓS linha 2)
+// ============================================
+// SISTEMA DE CACHE PARA LOCALSTORAGE
+// ============================================
+let cacheAtivo = {
+    cursos: null,
+    notas: null,
+    recursos: null,
+    dadosGame: null,
+    dadosFinanceiros: null,
+    ultimaAtualizacao: null
+};
+
+// ============================================
+// FUNÇÃO DE DEBOUNCE (evita chamadas excessivas)
+// ============================================
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// ============================================
+// PREVENIR EVENT LISTENERS DUPLICADOS
+// ============================================
+let listenersAdicionados = false;
+
+function adicionarEventListenersUmaVez() {
+    if (listenersAdicionados) return;
+    
+    // Drag and drop para OCR
+    const uploadArea = document.getElementById('uploadArea');
+    if (uploadArea) {
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#3b82f6';
+            uploadArea.style.background = 'var(--bg-primary)';
+        });
+
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '';
+            uploadArea.style.background = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '';
+            uploadArea.style.background = '';
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const input = document.getElementById('imagemOCR');
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+                processarImagemOCR({ target: input });
+            }
+        });
+    }
+    
+    listenersAdicionados = true;
+}
+
 // SISTEMA DE AUTENTICAÇÃO
 let usuarioAtual = null;
 
 // Verificar login ao carregar página
 window.addEventListener('DOMContentLoaded', () => {
     verificarLogin();
+    adicionarEventListenersUmaVez();
 });
 
 function verificarLogin() {
@@ -103,7 +176,7 @@ function confirmarLogout() {
 let cursos = [];
 
 
-// FUNÇÕES DE NAVEGAÇÃO
+// FUNÇÕES DE NAVEGAÇÃO (otimizado com lazy loading)
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
@@ -114,29 +187,69 @@ function showSection(sectionId) {
     });
 
     document.getElementById(sectionId).classList.add('active');
-    event.target.classList.add('active');
+    
+    // Marcar botão ativo
+    const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => 
+        btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(sectionId)
+    );
+    if (activeBtn) activeBtn.classList.add('active');
 
-    if (sectionId === 'inicio') {
-        atualizarEstatisticas();
-    }
-
-    if (sectionId === 'cursos') {
-        renderizarCursos();
-    }
-
-    if (sectionId === 'trilhas') {
-        renderizarTrilhas();
-    }
+    // LAZY LOADING: só carrega quando entra na seção
+    requestAnimationFrame(() => {
+        switch(sectionId) {
+            case 'inicio':
+                atualizarEstatisticas();
+                break;
+            case 'cursos':
+                renderizarCursos();
+                break;
+            case 'trilhas':
+                renderizarTrilhas();
+                break;
+            case 'pomodoro':
+                carregarPomodoro();
+                break;
+            case 'notas':
+                carregarNotas();
+                break;
+            case 'gamificacao':
+                carregarDadosGame();
+                break;
+            case 'biblioteca':
+                carregarRecursos();
+                renderizarRecursos();
+                break;
+            case 'ia-assistente':
+                renderizarIAAssistente();
+                break;
+            case 'certificados':
+                renderizarCertificados();
+                break;
+            case 'financeiro':
+                carregarDadosFinanceiros();
+                break;
+            case 'dados':
+                carregarConfigBackup();
+                atualizarEstatisticasDados();
+                break;
+        }
+    });
 }
 
-// ADICIONAR CURSO
-function adicionarCurso(event) {
+// ADICIONAR CURSO (VERSÃO CORRIGIDA)
+function adicionarCursoOriginal(event) {
     event.preventDefault();
+
+    console.log('🔍 TESTE: Função chamada!');
+    console.log('Categoria:', document.getElementById('categoria')?.value);
+    console.log('Plataforma:', document.getElementById('plataforma')?.value);
+    
 
     const nomeCurso = document.getElementById('nomeCurso').value.trim();
     const categoriaSelect = document.getElementById('categoria').value;
+    const plataformaSelect = document.getElementById('plataforma').value;
 
-    // Pegar categoria custom se for "Outros"
+    // Categoria personalizada
     let categoria = categoriaSelect;
     if (categoriaSelect === 'Outros') {
         const categoriaCustom = document.getElementById('categoriaCustom').value.trim();
@@ -146,6 +259,18 @@ function adicionarCurso(event) {
             return;
         }
         categoria = categoriaCustom;
+    }
+
+    // Plataforma personalizada
+    let plataforma = plataformaSelect;
+    if (plataformaSelect === 'Outro') {
+        const plataformaCustom = document.getElementById('plataformaCustom').value.trim();
+        if (!plataformaCustom) {
+            mostrarNotificacao('❌ Digite o nome da plataforma personalizada!');
+            document.getElementById('plataformaCustom').focus();
+            return;
+        }
+        plataforma = plataformaCustom;
     }
 
     // Verificar se já existe curso com esse nome
@@ -160,6 +285,7 @@ function adicionarCurso(event) {
         id: Date.now(),
         nome: nomeCurso,
         categoria: categoria,
+        plataforma: plataforma,
         status: document.getElementById('status').value,
         progresso: parseInt(document.getElementById('progresso').value) || 0,
         anotacoes: document.getElementById('anotacoes').value,
@@ -173,37 +299,66 @@ function adicionarCurso(event) {
 
     document.getElementById('formCurso').reset();
     document.getElementById('categoriaCustom').style.display = 'none';
+    document.getElementById('plataformaCustom').style.display = 'none';
     videoaulasTemp = [];
     renderizarVideoaulasTemp();
 
     mostrarNotificacao('✅ Curso adicionado com sucesso!');
     atualizarEstatisticas();
 
-    // Ir para "Meus Cursos"
     showSection('cursos');
+    
+    // Verificar certificado se chegou a 100%
+    if (curso.progresso === 100) {
+        verificarCertificado(curso.id);
+    }
 }
 
-// SALVAR NO LOCALSTORAGE
+// Função adicionarCurso que chama a original + integrações
+function adicionarCurso(event) {
+    adicionarCursoOriginal(event);
+    
+    // Integrações
+    if (typeof adicionarXP === 'function') {
+        adicionarXP(10, 'Curso adicionado');
+    }
+    if (typeof verificarConquistas === 'function') {
+        verificarConquistas();
+    }
+}
+
+// SALVAR NO LOCALSTORAGE (otimizado com cache)
 function salvarDados() {
     if (!usuarioAtual) return;
 
     const chave = `cursos_${usuarioAtual}`;
     localStorage.setItem(chave, JSON.stringify(cursos));
+    cacheAtivo.cursos = cursos;
+    cacheAtivo.ultimaAtualizacao = Date.now();
 }
 
-// CARREGAR DO LOCALSTORAGE
+// CARREGAR DO LOCALSTORAGE (otimizado com cache)
 function carregarDados() {
     if (!usuarioAtual) return;
+
+    // Se já tem em cache e foi atualizado há menos de 1 segundo, usar cache
+    if (cacheAtivo.cursos && (Date.now() - cacheAtivo.ultimaAtualizacao < 1000)) {
+        cursos = cacheAtivo.cursos;
+        atualizarEstatisticas();
+        return;
+    }
 
     const chave = `cursos_${usuarioAtual}`;
     const dados = localStorage.getItem(chave);
 
     if (dados) {
         cursos = JSON.parse(dados);
+        cacheAtivo.cursos = cursos;
     } else {
         cursos = [];
     }
 
+    cacheAtivo.ultimaAtualizacao = Date.now();
     atualizarEstatisticas();
 }
 
@@ -326,16 +481,15 @@ function deletarCurso(id) {
     }
 }
 
-// EDITAR CURSO
+// EDITAR CURSO (VERSÃO CORRIGIDA)
 function editarCurso(id) {
     const curso = cursos.find(c => c.id === id);
     if (!curso) return;
 
     document.getElementById('nomeCurso').value = curso.nome;
     
-    // Verificar se é categoria padrão ou personalizada
+    // Verificar categoria
     const categoriasFixas = ['Programação', 'Design', 'Marketing', 'Idiomas', 'Negócios', 'Dados'];
-    
     if (categoriasFixas.includes(curso.categoria)) {
         document.getElementById('categoria').value = curso.categoria;
         document.getElementById('categoriaCustom').style.display = 'none';
@@ -345,11 +499,21 @@ function editarCurso(id) {
         document.getElementById('categoriaCustom').value = curso.categoria;
     }
     
+    // Verificar plataforma
+    const plataformasFixas = ['Udemy', 'Alura', 'Rocketseat', 'Coursera', 'DIO', 'YouTube'];
+    if (plataformasFixas.includes(curso.plataforma)) {
+        document.getElementById('plataforma').value = curso.plataforma;
+        document.getElementById('plataformaCustom').style.display = 'none';
+    } else {
+        document.getElementById('plataforma').value = 'Outro';
+        document.getElementById('plataformaCustom').style.display = 'block';
+        document.getElementById('plataformaCustom').value = curso.plataforma || '';
+    }
+    
     document.getElementById('status').value = curso.status;
     document.getElementById('progresso').value = curso.progresso;
     document.getElementById('anotacoes').value = curso.anotacoes;
     
-    // Carregar videoaulas
     videoaulasTemp = curso.videoaulas ? [...curso.videoaulas] : [];
     renderizarVideoaulasTemp();
 
@@ -386,8 +550,8 @@ function mostrarNotificacao(mensagem) {
     }, 3000);
 }
 
-// APLICAR FILTROS
-function aplicarFiltros() {
+// APLICAR FILTROS (otimizado com debounce)
+const aplicarFiltros = debounce(function() {
     const categoriaFiltro = document.getElementById('filtrCategoria').value;
     const statusFiltro = document.getElementById('filtroStatus').value;
     const buscaFiltro = document.getElementById('filtroBusca').value.toLowerCase();
@@ -410,7 +574,7 @@ function aplicarFiltros() {
     }
 
     renderizarCursosFiltrados(cursosFiltrados);
-}
+}, 300);
 
 // RENDERIZAR CURSOS FILTRADOS
 function renderizarCursosFiltrados(cursosFiltrados) {
@@ -1042,9 +1206,12 @@ function atualizarGraficos() {
         return;
     }
 
-    criarGraficoCategorias();
-    criarGraficoStatus();
-    criarGraficoProgresso();
+    // Usar requestAnimationFrame para não travar a UI
+    requestAnimationFrame(() => {
+        criarGraficoCategorias();
+        criarGraficoStatus();
+        criarGraficoProgresso();
+    });
 }
 
 function destruirGraficos() {
@@ -1059,6 +1226,10 @@ function destruirGraficos() {
     if (graficoProgressoChart) {
         graficoProgressoChart.destroy();
         graficoProgressoChart = null;
+    }
+    if (graficoGastosChart) {
+        graficoGastosChart.destroy();
+        graficoGastosChart = null;
     }
 }
 
@@ -2173,8 +2344,8 @@ function deletarNotaAtual() {
     mostrarNotificacao('🗑️ Nota deletada!');
 }
 
-// Buscar notas
-function buscarNotas() {
+// Buscar notas (otimizado com debounce)
+const buscarNotas = debounce(function() {
     const termo = document.getElementById('buscaNotas').value.toLowerCase();
 
     if (!termo) {
@@ -2216,7 +2387,7 @@ function buscarNotas() {
             </div>
         `;
     }).join('');
-}
+}, 300);
 
 // Carregar notas ao entrar na aba
 const originalShowSection3 = showSection;
@@ -2509,29 +2680,11 @@ function renderizarDesafios() {
     }).join('');
 }
 
-// Integrar gamificação com ações do usuário
-const originalAdicionarCurso = adicionarCurso;
-adicionarCurso = function (event) {
-    originalAdicionarCurso.call(this, event);
-    adicionarXP(10, 'Curso adicionado');
-    verificarConquistas();
-};
+// (Removido - integração já está na função adicionarCurso principal)
 
-const originalSalvarNotaAtual = salvarNotaAtual;
-salvarNotaAtual = function () {
-    originalSalvarNotaAtual.call(this);
-    adicionarXP(5, 'Nota salva');
-    verificarConquistas();
-};
+// (Removido - integração já está na função salvarNotaAtual)
 
-const originalFinalizarSessao = finalizarSessao;
-finalizarSessao = function () {
-    originalFinalizarSessao.call(this);
-    if (modoAtual === 'pomodoro') {
-        adicionarXP(15, 'Pomodoro completado');
-        verificarConquistas();
-    }
-};
+// (Removido - integração já está na função finalizarSessao)
 
 // Atualizar showSection para carregar gamificação
 const originalShowSection4 = showSection;
@@ -2771,39 +2924,6 @@ function salvarOCRComoNota() {
     mostrarNotificacao('💾 Texto salvo como nota!');
 }
 
-// Drag and drop para OCR
-document.addEventListener('DOMContentLoaded', () => {
-    const uploadArea = document.getElementById('uploadArea');
-
-    if (uploadArea) {
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '#3b82f6';
-            uploadArea.style.background = 'var(--bg-primary)';
-        });
-
-        uploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '';
-            uploadArea.style.background = '';
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.style.borderColor = '';
-            uploadArea.style.background = '';
-
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                const input = document.getElementById('imagemOCR');
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                input.files = dataTransfer.files;
-                processarImagemOCR({ target: input });
-            }
-        });
-    }
-});
 
 // ============================================
 // SISTEMA DE VIDEOAULAS YOUTUBE
@@ -2938,6 +3058,22 @@ function toggleCategoriaCustom() {
     const customInput = document.getElementById('categoriaCustom');
     
     if (categoria === 'Outros') {
+        customInput.style.display = 'block';
+        customInput.required = true;
+        customInput.focus();
+    } else {
+        customInput.style.display = 'none';
+        customInput.required = false;
+        customInput.value = '';
+    }
+}
+
+// Toggle plataforma personalizada
+function togglePlataformaCustom() {
+    const plataforma = document.getElementById('plataforma').value;
+    const customInput = document.getElementById('plataformaCustom');
+    
+    if (plataforma === 'Outro') {
         customInput.style.display = 'block';
         customInput.required = true;
         customInput.focus();
@@ -3297,24 +3433,7 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Hook no adicionarCurso para verificar se foi edição com 100%
-const originalAdicionarCurso2 = adicionarCurso;
-adicionarCurso = function(event) {
-    event.preventDefault();
-    
-    const progresso = parseInt(document.getElementById('progresso').value) || 0;
-    
-    // Chamar original
-    originalAdicionarCurso2.call(this, event);
-    
-    // Se chegou em 100%, verificar certificado
-    if (progresso === 100) {
-        const ultimoCurso = cursos[cursos.length - 1];
-        if (ultimoCurso) {
-            verificarCertificado(ultimoCurso.id);
-        }
-    }
-};
+// (Removido - integração já está na função adicionarCurso principal)
 
 // Atualizar progresso automaticamente baseado no status
 function atualizarProgressoPorStatus() {
@@ -4346,17 +4465,7 @@ showSection = function(sectionId) {
     }
 };
 
-// Atualizar recomendações quando adicionar/editar curso
-const originalAdicionarCurso3 = adicionarCurso;
-adicionarCurso = function(event) {
-    originalAdicionarCurso3.call(this, event);
-    
-    // Se estiver na tela da IA, atualizar
-    const iaSection = document.getElementById('ia-assistente');
-    if (iaSection && iaSection.classList.contains('active')) {
-        setTimeout(() => renderizarIAAssistente(), 500);
-    }
-};
+// (Removido - integração já está na função adicionarCurso principal)
 
 // ============================================
 // EFEITOS VISUAIS MODERNOS
@@ -5412,3 +5521,472 @@ showSection = function(sectionId) {
 carregarDadosFinanceiros();
 
 console.log('💰 Sistema Financeiro carregado!');
+
+// ============================================
+// GERADOR DE CUPOM FISCAL (PDF TÉRMICO)
+// ============================================
+
+// Gerar cupom fiscal térmico
+function gerarNotaFiscalCupom() {
+    if (dadosFinanceiros.cursosComprados.length === 0) {
+        mostrarNotificacao('❌ Adicione valores aos cursos primeiro!');
+        return;
+    }
+    
+    // Gerar conteúdo do cupom
+    const cupomHTML = gerarCupomHTML();
+    
+    // Mostrar modal
+    const modal = document.getElementById('modalCupomFiscal');
+    const preview = document.getElementById('cupomPreview');
+    preview.innerHTML = cupomHTML;
+    modal.classList.add('show');
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) fecharCupomFiscal();
+    });
+}
+
+// Gerar HTML do cupom (VERSÃO CORRIGIDA)
+function gerarCupomHTML() {
+    const agora = new Date();
+    const data = agora.toLocaleDateString('pt-BR');
+    const hora = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    
+    // Calcular valores
+    let subtotal = 0;
+    const itens = dadosFinanceiros.cursosComprados.map(cf => {
+        const curso = cursos.find(c => c.id === cf.cursoId);
+        if (!curso) return null;
+        
+        subtotal += cf.valor;
+        
+        return {
+            nome: curso.nome,
+            plataforma: curso.plataforma || curso.categoria, // ← CORRIGIDO
+            valor: cf.valor
+        };
+    }).filter(Boolean);
+    
+    const impostos = subtotal * 0.0593;
+    const total = subtotal + impostos;
+    const hash = gerarHashAutenticacao();
+    
+    return `
+        <div class="cupom-paper">
+            <div class="cupom-linha negrito grande">LACERDASH EDUCACAO</div>
+            <div class="cupom-linha">================================</div>
+            <div class="cupom-linha">CNPJ: 12.345.678/0001-99</div>
+            <div class="cupom-linha">Data: ${data} - ${hora}</div>
+            <div class="cupom-linha">================================</div>
+            <div class="cupom-linha"></div>
+            <div class="cupom-linha negrito">CURSOS CONCLUIDOS:</div>
+            <div class="cupom-linha"></div>
+            
+            ${itens.map((item, index) => `
+                <div class="cupom-item">
+                    <div class="cupom-item-nome">${index + 1}. ${item.nome}</div>
+                    <div class="cupom-item-detalhe">
+                        <span>Plataforma: ${item.plataforma}</span>
+                        <span>R$ ${item.valor.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                </div>
+                <div class="cupom-separador">--------------------------------</div>
+            `).join('')}
+            
+            <div class="cupom-total-box">
+                <div class="cupom-total-linha">
+                    <span>Subtotal:</span>
+                    <span>R$ ${subtotal.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div class="cupom-total-linha">
+                    <span>Impostos aprox. (5,93%):</span>
+                    <span>R$ ${impostos.toFixed(2).replace('.', ',')}</span>
+                </div>
+                <div class="cupom-separador">--------------------------------</div>
+                <div class="cupom-total-linha destaque">
+                    <span>TOTAL:</span>
+                    <span>R$ ${total.toFixed(2).replace('.', ',')}</span>
+                </div>
+            </div>
+            
+            <div class="cupom-linha">================================</div>
+            <div class="cupom-rodape">
+                <div class="cupom-linha">Codigo de Autenticacao:</div>
+                <div class="cupom-hash">${hash}</div>
+                <div class="cupom-linha"></div>
+                <div class="cupom-linha negrito">Obrigado pela preferencia!</div>
+                <div class="cupom-linha">www.lacerdash.com.br</div>
+            </div>
+            <div class="cupom-linha">================================</div>
+        </div>
+    `;
+}
+
+// Gerar hash de autenticação
+function gerarHashAutenticacao() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    const usuario = usuarioAtual || 'guest';
+    
+    // Simular hash SHA-256 (em produção, use crypto.subtle.digest)
+    const str = `${timestamp}${random}${usuario}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    
+    return Math.abs(hash).toString(16).padStart(16, '0').toUpperCase();
+}
+
+// Fechar modal do cupom
+function fecharCupomFiscal() {
+    const modal = document.getElementById('modalCupomFiscal');
+    modal.classList.remove('show');
+}
+
+// Baixar cupom como PDF (VERSÃO CORRIGIDA)
+async function baixarCupomPDF() {
+    mostrarNotificacao('📄 Gerando PDF do cupom...');
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: [80, 297]
+        });
+        
+        const margemX = 5;
+        let y = 10;
+        const largura = 70;
+        
+        const addTexto = (texto, tamanho = 8, negrito = false, centralizado = true) => {
+            doc.setFontSize(tamanho);
+            doc.setFont('courier', negrito ? 'bold' : 'normal');
+            
+            if (centralizado) {
+                const textWidth = doc.getTextWidth(texto);
+                const x = (80 - textWidth) / 2;
+                doc.text(texto, x, y);
+            } else {
+                doc.text(texto, margemX, y);
+            }
+            y += tamanho * 0.5;
+        };
+        
+        const addLinha = (caracter = '=') => {
+            addTexto(caracter.repeat(32), 8, false, true);
+        };
+        
+        addTexto('LACERDASH EDUCACAO', 12, true);
+        addLinha();
+        addTexto('CNPJ: 12.345.678/0001-99', 8);
+        addTexto(`Data: ${new Date().toLocaleDateString('pt-BR')} - ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}`, 8);
+        addLinha();
+        y += 2;
+        addTexto('CURSOS CONCLUIDOS:', 9, true);
+        y += 2;
+        
+        let subtotal = 0;
+        dadosFinanceiros.cursosComprados.forEach((cf, index) => {
+            const curso = cursos.find(c => c.id === cf.cursoId);
+            if (!curso) return;
+            
+            subtotal += cf.valor;
+            
+            doc.setFontSize(8);
+            doc.setFont('courier', 'bold');
+            const nomeCompleto = `${index + 1}. ${curso.nome}`;
+            const linhasNome = doc.splitTextToSize(nomeCompleto, largura);
+            linhasNome.forEach(linha => {
+                doc.text(linha, margemX, y);
+                y += 3.5;
+            });
+            
+            doc.setFont('courier', 'normal');
+            doc.setFontSize(7);
+            const plataforma = curso.plataforma || curso.categoria; // ← CORRIGIDO
+            doc.text(`Plataforma: ${plataforma}`, margemX, y);
+            const valorStr = `R$ ${cf.valor.toFixed(2).replace('.', ',')}`;
+            const valorWidth = doc.getTextWidth(valorStr);
+            doc.text(valorStr, 75 - valorWidth, y);
+            y += 3.5;
+            
+            doc.text('-'.repeat(32), margemX, y);
+            y += 3.5;
+        });
+        
+        const impostos = subtotal * 0.0593;
+        const total = subtotal + impostos;
+        
+        y += 1;
+        doc.setFontSize(8);
+        doc.setFont('courier', 'normal');
+        
+        doc.text('Subtotal:', margemX, y);
+        doc.text(`R$ ${subtotal.toFixed(2).replace('.', ',')}`, 75 - doc.getTextWidth(`R$ ${subtotal.toFixed(2)}`), y);
+        y += 3.5;
+        
+        doc.text('Impostos aprox (5,93%):', margemX, y);
+        doc.text(`R$ ${impostos.toFixed(2).replace('.', ',')}`, 75 - doc.getTextWidth(`R$ ${impostos.toFixed(2)}`), y);
+        y += 3.5;
+        
+        doc.text('-'.repeat(32), margemX, y);
+        y += 3.5;
+        
+        doc.setFont('courier', 'bold');
+        doc.setFontSize(10);
+        doc.text('TOTAL:', margemX, y);
+        const totalStr = `R$ ${total.toFixed(2).replace('.', ',')}`;
+        doc.text(totalStr, 75 - doc.getTextWidth(totalStr), y);
+        y += 5;
+        
+        addLinha();
+        y += 1;
+        addTexto('Codigo de Autenticacao:', 7);
+        const hash = gerarHashAutenticacao();
+        doc.setFontSize(6);
+        doc.setFont('courier', 'normal');
+        const hashLines = doc.splitTextToSize(hash, largura);
+        hashLines.forEach(linha => {
+            doc.text(linha, (80 - doc.getTextWidth(linha)) / 2, y);
+            y += 2.5;
+        });
+        y += 2;
+        addTexto('Obrigado pela preferencia!', 8, true);
+        addTexto('www.lacerdash.com.br', 7);
+        addLinha();
+        
+        const filename = `cupom-fiscal-${Date.now()}.pdf`;
+        doc.save(filename);
+        
+        mostrarNotificacao('✅ Cupom fiscal gerado com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao gerar cupom:', error);
+        mostrarNotificacao('❌ Erro ao gerar cupom. Verifique o console.');
+    }
+}
+
+// ============================================
+// EMITIR NOTA FISCAL - APENAS CUPOM TÉRMICO
+// ============================================
+gerarNotaFiscal = function() {
+    if (!dadosFinanceiros || dadosFinanceiros.cursosComprados.length === 0) {
+        mostrarNotificacao('❌ Adicione valores aos cursos primeiro!');
+        return;
+    }
+    
+    // Ir direto para o cupom térmico (SEM escolha)
+    gerarNotaFiscalCupom();
+};
+
+// ============================================
+// MELHORIAS SISTEMA FINANCEIRO
+// ============================================
+
+// Variável global para armazenar período selecionado
+let periodoNotaSelecionado = 'todos';
+let dataInicialCustom = null;
+let dataFinalCustom = null;
+
+// Renderizar lista de cursos financeiros COM BOTÃO DE EXCLUIR
+function renderizarListaCursosFinanceiros() {
+    const container = document.getElementById('listaCursosFinanceiros');
+    
+    if (dadosFinanceiros.cursosComprados.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">Nenhum valor adicionado ainda</p>';
+        return;
+    }
+    
+    container.innerHTML = dadosFinanceiros.cursosComprados.map(cf => {
+        const curso = cursos.find(c => c.id === cf.cursoId);
+        if (!curso) return '';
+        
+        const roiClass = cf.roi > 100 ? 'roi-positivo' : 'roi-negativo';
+        
+        return `
+            <div class="curso-financeiro-item">
+                <div class="curso-financeiro-info">
+                    <div class="curso-financeiro-nome">${curso.nome}</div>
+                    <div class="curso-financeiro-detalhes">
+                        📅 Comprado em ${new Date(cf.dataCompra).toLocaleDateString('pt-BR')} • 
+                        ${curso.categoria}
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="text-align: right;">
+                        <div class="curso-financeiro-valor">
+                            R$ ${cf.valor.toFixed(2).replace('.', ',')}
+                        </div>
+                        ${cf.roi > 0 ? `
+                            <span class="curso-financeiro-roi ${roiClass}">
+                                ROI: ${cf.roi}%
+                            </span>
+                        ` : ''}
+                    </div>
+                    <button class="btn-excluir-financeiro" onclick="excluirCursoFinanceiro(${cf.cursoId})">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Excluir curso financeiro
+function excluirCursoFinanceiro(cursoId) {
+    const curso = cursos.find(c => c.id === cursoId);
+    const cursoFinanceiro = dadosFinanceiros.cursosComprados.find(cf => cf.cursoId === cursoId);
+    
+    if (!curso || !cursoFinanceiro) return;
+    
+    if (!confirm(`Deseja remover o valor financeiro de "${curso.nome}"?\n\nO curso não será deletado, apenas o registro financeiro.`)) return;
+    
+    dadosFinanceiros.cursosComprados = dadosFinanceiros.cursosComprados.filter(cf => cf.cursoId !== cursoId);
+    salvarDadosFinanceiros();
+    renderizarFinanceiro();
+    
+    mostrarNotificacao('🗑️ Valor financeiro removido!');
+}
+
+// Abrir modal de filtro de nota
+function abrirModalFiltroNota() {
+    if (!dadosFinanceiros || dadosFinanceiros.cursosComprados.length === 0) {
+        mostrarNotificacao('❌ Adicione valores aos cursos primeiro!');
+        return;
+    }
+    
+    const modal = document.getElementById('modalFiltroNota');
+    modal.classList.remove('hidden');
+    
+    // Definir data final como hoje
+    document.getElementById('dataFinal').valueAsDate = new Date();
+    
+    // Definir data inicial como 1 ano atrás
+    const umAnoAtras = new Date();
+    umAnoAtras.setFullYear(umAnoAtras.getFullYear() - 1);
+    document.getElementById('dataInicial').valueAsDate = umAnoAtras;
+    
+    // Atualizar preview
+    atualizarPreviewFiltro();
+}
+
+// Fechar modal de filtro
+function fecharModalFiltroNota() {
+    const modal = document.getElementById('modalFiltroNota');
+    modal.classList.add('hidden');
+}
+
+// Selecionar período
+function selecionarPeriodoNota(periodo) {
+    periodoNotaSelecionado = periodo;
+    
+    // Atualizar botões ativos
+    document.querySelectorAll('.filtro-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Mostrar/esconder filtro personalizado
+    const filtroPersonalizado = document.getElementById('filtroPersonalizado');
+    if (periodo === 'personalizado') {
+        filtroPersonalizado.classList.remove('hidden');
+    } else {
+        filtroPersonalizado.classList.add('hidden');
+    }
+    
+    atualizarPreviewFiltro();
+}
+
+// Atualizar preview do filtro
+function atualizarPreviewFiltro() {
+    const cursosFiltrados = filtrarCursosPorPeriodo();
+    const totalValor = cursosFiltrados.reduce((acc, cf) => acc + cf.valor, 0);
+    
+    document.getElementById('totalCursosFiltrados').textContent = cursosFiltrados.length;
+    document.getElementById('valorTotalFiltrado').textContent = `R$ ${totalValor.toFixed(2).replace('.', ',')}`;
+}
+
+// Filtrar cursos por período
+function filtrarCursosPorPeriodo() {
+    const agora = new Date();
+    let dataInicio = null;
+    
+    switch (periodoNotaSelecionado) {
+        case 'todos':
+            return dadosFinanceiros.cursosComprados;
+        
+        case 'mes':
+            dataInicio = new Date();
+            dataInicio.setMonth(dataInicio.getMonth() - 1);
+            break;
+        
+        case 'trimestre':
+            dataInicio = new Date();
+            dataInicio.setMonth(dataInicio.getMonth() - 3);
+            break;
+        
+        case 'ano':
+            dataInicio = new Date();
+            dataInicio.setFullYear(dataInicio.getFullYear() - 1);
+            break;
+        
+        case 'personalizado':
+            dataInicio = new Date(document.getElementById('dataInicial').value);
+            const dataFim = new Date(document.getElementById('dataFinal').value);
+            
+            return dadosFinanceiros.cursosComprados.filter(cf => {
+                const dataCompra = new Date(cf.dataCompra);
+                return dataCompra >= dataInicio && dataCompra <= dataFim;
+            });
+    }
+    
+    return dadosFinanceiros.cursosComprados.filter(cf => {
+        const dataCompra = new Date(cf.dataCompra);
+        return dataCompra >= dataInicio;
+    });
+}
+
+// Gerar nota fiscal filtrada
+function gerarNotaFiscalFiltrada() {
+    const cursosFiltrados = filtrarCursosPorPeriodo();
+    
+    if (cursosFiltrados.length === 0) {
+        mostrarNotificacao('❌ Nenhum curso no período selecionado!');
+        return;
+    }
+    
+    fecharModalFiltroNota();
+    
+    // Temporariamente substituir dados
+    const dadosOriginais = [...dadosFinanceiros.cursosComprados];
+    dadosFinanceiros.cursosComprados = cursosFiltrados;
+    
+    // Gerar cupom
+    gerarNotaFiscalCupom();
+    
+    // Restaurar dados originais
+    setTimeout(() => {
+        dadosFinanceiros.cursosComprados = dadosOriginais;
+    }, 1000);
+}
+
+// Event listeners para datas personalizadas
+document.addEventListener('DOMContentLoaded', () => {
+    const dataInicial = document.getElementById('dataInicial');
+    const dataFinal = document.getElementById('dataFinal');
+    
+    if (dataInicial && dataFinal) {
+        dataInicial.addEventListener('change', atualizarPreviewFiltro);
+        dataFinal.addEventListener('change', atualizarPreviewFiltro);
+    }
+});
+
+console.log('✅ Melhorias Financeiras carregadas!');
+
+console.log('📄 Sistema de Cupom Fiscal carregado!');

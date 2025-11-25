@@ -321,6 +321,7 @@
                                 autocomplete="off">
                         </div>
 
+                        <!-- ✅ NOVO CAMPO ADICIONADO AQUI -->
                         <div class="form-group">
                             <label for="categoria">Categoria *</label>
                             <select id="categoria" required onchange="toggleCategoriaCustom()">
@@ -333,7 +334,23 @@
                                 <option value="Dados">Dados</option>
                                 <option value="Outros">Outros (personalizar)</option>
                             </select>
-                            <input type="text" id="categoriaCustom" placeholder="Digite sua categoria..."
+                            <input type="text" id="categoriaCustom" placeholder="Digite a categoria..."
+                                autocomplete="off" style="display: none; margin-top: 10px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plataforma">Plataforma *</label>
+                            <select id="plataforma" required onchange="togglePlataformaCustom()">
+                                <option value="">Selecione...</option>
+                                <option value="Udemy">Udemy</option>
+                                <option value="Alura">Alura</option>
+                                <option value="Rocketseat">Rocketseat</option>
+                                <option value="Coursera">Coursera</option>
+                                <option value="DIO">DIO</option>
+                                <option value="YouTube">YouTube</option>
+                                <option value="Outro">Outro (personalizar)</option>
+                            </select>
+                            <input type="text" id="plataformaCustom" placeholder="Digite a plataforma..."
                                 autocomplete="off" style="display: none; margin-top: 10px;">
                         </div>
 
@@ -869,7 +886,7 @@
                     <button class="btn-financeiro btn-wishlist" onclick="abrirModalWishlist()">
                         🛒 Gerenciar Wishlist
                     </button>
-                    <button class="btn-financeiro btn-nota-fiscal" onclick="gerarNotaFiscal()">
+                    <button class="btn-financeiro btn-nota-fiscal" onclick="abrirModalFiltroNota()">
                         📄 Emitir Nota Fiscal
                     </button>
                 </div>
@@ -899,6 +916,63 @@
                 <div class="alertas-section">
                     <h3>🔔 Alertas de Promoção</h3>
                     <div id="listaAlertas"></div>
+                </div>
+
+                <!-- MODAL FILTRO DE NOTA FISCAL -->
+                <div class="modal-filtro-nota hidden" id="modalFiltroNota">
+                    <div class="modal-filtro-content">
+                        <div class="modal-filtro-header">
+                            <h3>📅 Selecionar Período da Nota Fiscal</h3>
+                            <button class="btn-close-filtro" onclick="fecharModalFiltroNota()">✕</button>
+                        </div>
+
+                        <div class="modal-filtro-body">
+                            <div class="filtro-opcoes">
+                                <button class="filtro-btn active" onclick="selecionarPeriodoNota('todos')"
+                                    data-periodo="todos">
+                                    📚 Todos os Cursos
+                                </button>
+                                <button class="filtro-btn" onclick="selecionarPeriodoNota('mes')" data-periodo="mes">
+                                    📆 Último Mês
+                                </button>
+                                <button class="filtro-btn" onclick="selecionarPeriodoNota('trimestre')"
+                                    data-periodo="trimestre">
+                                    📊 Último Trimestre
+                                </button>
+                                <button class="filtro-btn" onclick="selecionarPeriodoNota('ano')" data-periodo="ano">
+                                    📅 Último Ano
+                                </button>
+                                <button class="filtro-btn" onclick="selecionarPeriodoNota('personalizado')"
+                                    data-periodo="personalizado">
+                                    🎯 Personalizado
+                                </button>
+                            </div>
+
+                            <div class="filtro-personalizado hidden" id="filtroPersonalizado">
+                                <div class="form-group">
+                                    <label>Data Inicial</label>
+                                    <input type="date" id="dataInicial">
+                                </div>
+                                <div class="form-group">
+                                    <label>Data Final</label>
+                                    <input type="date" id="dataFinal">
+                                </div>
+                            </div>
+
+                            <div class="filtro-preview" id="filtroPreview">
+                                <p>📋 Será gerada nota fiscal com <strong id="totalCursosFiltrados">0</strong> curso(s)
+                                </p>
+                                <p>💰 Valor total: <strong id="valorTotalFiltrado">R$ 0,00</strong></p>
+                            </div>
+                        </div>
+
+                        <div class="modal-filtro-footer">
+                            <button class="btn-modal btn-cancelar" onclick="fecharModalFiltroNota()">Cancelar</button>
+                            <button class="btn-modal btn-confirmar" onclick="gerarNotaFiscalFiltrada()">
+                                📄 Gerar Nota Fiscal
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1017,8 +1091,33 @@
 
         </div>
 
+        <!-- MODAL CUPOM FISCAL -->
+        <div class="modal-cupom-fiscal" id="modalCupomFiscal">
+            <div class="modal-cupom-content">
+                <div class="cupom-header">
+                    <h3>📄 Nota Fiscal - Cupom Térmico</h3>
+                    <button class="btn-close-cupom" onclick="fecharCupomFiscal()">✕</button>
+                </div>
+
+                <div class="cupom-preview" id="cupomPreview">
+                    <!-- O cupom será gerado aqui via JavaScript -->
+                </div>
+
+                <div class="cupom-acoes">
+                    <button class="btn-cupom-acao btn-baixar-cupom" onclick="baixarCupomPDF()">
+                        📥 Baixar PDF
+                    </button>
+                    <button class="btn-cupom-acao btn-fechar-modal" onclick="fecharCupomFiscal()">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+
 
         <script src="script.js"></script>
+
+
 </body>
 
 </html>
