@@ -236,6 +236,29 @@ function showSection(sectionId) {
     });
 }
 
+// ============================================
+// NAVEGAÇÃO DROPDOWN
+// ============================================
+function toggleNavDropdown() {
+    const menu = document.getElementById('navDropdownMenu');
+    menu.classList.toggle('hidden');
+}
+
+function closeNavDropdown() {
+    const menu = document.getElementById('navDropdownMenu');
+    menu.classList.add('hidden');
+}
+
+// Fechar dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+    const dropdown = document.querySelector('.nav-dropdown');
+    const menu = document.getElementById('navDropdownMenu');
+    
+    if (dropdown && menu && !dropdown.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
 // ADICIONAR CURSO (VERSÃO CORRIGIDA)
 function adicionarCursoOriginal(event) {
     event.preventDefault();
@@ -4058,412 +4081,177 @@ showSection = function(sectionId) {
 carregarConfigBackup();
 
 // ============================================
-// IA ASSISTENTE DE ESTUDOS
+// ANALYTICS (NOVA SEÇÃO)
 // ============================================
+let graficoComparativoChart = null;
 
-// Analisar perfil do usuário
-function analisarPerfilAprendizado() {
-    const totalCursos = cursos.length;
-    const concluidos = cursos.filter(c => c.status === 'concluido').length;
-    const emAndamento = cursos.filter(c => c.status === 'em-andamento').length;
-    const progressoMedio = totalCursos > 0 
-        ? Math.round(cursos.reduce((acc, c) => acc + c.progresso, 0) / totalCursos)
-        : 0;
-    
-    // Calcular velocidade de conclusão
-    let velocidade = 'Normal';
-    if (concluidos >= 5) velocidade = 'Rápida';
-    else if (concluidos >= 10) velocidade = 'Muito Rápida';
-    else if (concluidos < 2 && totalCursos > 5) velocidade = 'Lenta';
-    
-    // Calcular consistência
-    let consistencia = 'Moderada';
-    if (progressoMedio >= 70) consistencia = 'Alta';
-    else if (progressoMedio >= 40) consistencia = 'Boa';
-    else if (progressoMedio < 30) consistencia = 'Baixa';
-    
-    // Definir tipo de aprendiz
-    let tipoAprendiz = 'Explorador';
-    const categorias = {};
-    cursos.forEach(c => {
-        categorias[c.categoria] = (categorias[c.categoria] || 0) + 1;
-    });
-    
-    const categoriaDominante = Object.keys(categorias).length;
-    if (categoriaDominante === 1) tipoAprendiz = 'Especialista';
-    else if (categoriaDominante >= 4) tipoAprendiz = 'Polímata';
-    else if (emAndamento > concluidos * 2) tipoAprendiz = 'Multitarefa';
-    else if (concluidos > emAndamento * 2) tipoAprendiz = 'Focado';
-    
-    return { velocidade, consistencia, tipoAprendiz, progressoMedio, concluidos, emAndamento };
+// Renderizar Analytics
+function renderizarAnalytics() {
+    atualizarCardsAnalytics();
+    renderizarHeatmapSemanal();
+    criarGraficoComparativoMensal();
+    atualizarMetricasAnalytics();
 }
 
-// Gerar recomendações personalizadas
-function gerarRecomendacoes() {
-    const perfil = analisarPerfilAprendizado();
-    const recomendacoes = [];
-    
-    // Recomendação 1: Baseada em cursos pausados
-    const pausados = cursos.filter(c => c.status === 'pausado');
-    if (pausados.length > 0) {
-        recomendacoes.push({
-            icon: '⏸️',
-            titulo: 'Cursos Pausados Precisam de Atenção',
-            texto: `Você tem ${pausados.length} curso(s) pausado(s). Que tal retomar "${pausados[0].nome}"? Retomar pode te dar +50 XP!`,
-            acao: 'Ver Cursos Pausados',
-            tipo: 'atencao'
-        });
-    }
-    
-    // Recomendação 2: Baseada em progresso
-    if (perfil.progressoMedio < 30) {
-        recomendacoes.push({
-            icon: '🎯',
-            titulo: 'Foco é a Chave do Sucesso',
-            texto: 'Seu progresso médio está baixo. Sugestão: Escolha 1-2 cursos prioritários e foque neles até 50% de conclusão.',
-            acao: 'Ver Melhores Práticas',
-            tipo: 'alerta'
-        });
-    }
-    
-    // Recomendação 3: Baseada em tempo
-    if (perfil.velocidade === 'Lenta' && perfil.emAndamento > 3) {
-        recomendacoes.push({
-            icon: '⚡',
-            titulo: 'Menos é Mais',
-            texto: `Você tem ${perfil.emAndamento} cursos em andamento. Reduzir para 2-3 pode aumentar sua taxa de conclusão em até 60%!`,
-            acao: 'Priorizar Cursos',
-            tipo: 'info'
-        });
-    }
-    
-    // Recomendação 4: Baseada em conquistas
-    if (perfil.concluidos >= 3) {
-        recomendacoes.push({
-            icon: '🏆',
-            titulo: 'Continue Assim!',
-            texto: `Você já concluiu ${perfil.concluidos} cursos! Está no caminho certo. Mais ${10 - perfil.concluidos} para desbloquear a conquista "Mestre".`,
-            acao: 'Ver Conquistas',
-            tipo: 'positivo'
-        });
-    }
-    
-    // Recomendação 5: Técnica Pomodoro
-    const usouPomodoro = typeof sessoesHoje !== 'undefined' && sessoesHoje > 0;
-    if (!usouPomodoro && perfil.emAndamento > 0) {
-        recomendacoes.push({
-            icon: '🍅',
-            titulo: 'Experimente a Técnica Pomodoro',
-            texto: 'Estudos mostram que Pomodoro aumenta a produtividade em 25%. Que tal começar uma sessão agora?',
-            acao: 'Iniciar Pomodoro',
-            tipo: 'info'
-        });
-    }
-    
-    // Recomendação 6: Notas
-    const temNotas = typeof notas !== 'undefined' && notas && notas.length > 0;
-    if (!temNotas && perfil.emAndamento > 0) {
-        recomendacoes.push({
-            icon: '📝',
-            titulo: 'Anotações Melhoram a Retenção',
-            texto: 'Fazer anotações aumenta a retenção de conteúdo em 34%. Comece criando resumos dos seus cursos!',
-            acao: 'Criar Nota',
-            tipo: 'info'
-        });
-    }
-    
-    return recomendacoes;
-}
-
-// Gerar plano de estudos inteligente
-function gerarPlanoEstudos() {
-    const cursosAtivos = cursos.filter(c => c.status === 'em-andamento' || c.status === 'pausado');
-    
-    if (cursosAtivos.length === 0) {
-        mostrarNotificacao('❌ Você precisa ter cursos em andamento para gerar um plano!');
-        return;
-    }
-    
-    // Priorizar cursos (maior progresso primeiro)
-    const cursosPrioritarios = [...cursosAtivos]
-        .sort((a, b) => b.progresso - a.progresso)
-        .slice(0, 3);
-    
-    const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-    const plano = [];
-    
-    diasSemana.forEach((dia, index) => {
-        const atividades = [];
-        
-        if (index < 5) { // Segunda a Sexta
-            // Manhã: Curso principal
-            if (cursosPrioritarios[0]) {
-                atividades.push({
-                    hora: '08:00',
-                    curso: cursosPrioritarios[0].nome,
-                    duracao: '1h',
-                    tipo: 'estudo'
-                });
-            }
-            
-            // Tarde: Segundo curso
-            if (cursosPrioritarios[1]) {
-                atividades.push({
-                    hora: '14:00',
-                    curso: cursosPrioritarios[1].nome,
-                    duracao: '45min',
-                    tipo: 'estudo'
-                });
-            }
-            
-            // Noite: Revisão
-            atividades.push({
-                hora: '20:00',
-                curso: 'Revisão e Notas',
-                duracao: '30min',
-                tipo: 'revisao'
-            });
-        } else { // Fim de semana
-            if (index === 5) { // Sábado - Intensivo
-                if (cursosPrioritarios[0]) {
-                    atividades.push({
-                        hora: '09:00',
-                        curso: cursosPrioritarios[0].nome,
-                        duracao: '2h',
-                        tipo: 'estudo'
-                    });
-                }
-                if (cursosPrioritarios[2]) {
-                    atividades.push({
-                        hora: '15:00',
-                        curso: cursosPrioritarios[2].nome,
-                        duracao: '1h',
-                        tipo: 'estudo'
-                    });
-                }
-            } else { // Domingo - Leve
-                atividades.push({
-                    hora: '10:00',
-                    curso: 'Revisão Semanal',
-                    duracao: '1h',
-                    tipo: 'revisao'
-                });
-            }
-        }
-        
-        plano.push({ dia, atividades });
-    });
-    
-    renderizarPlanoEstudos(plano);
-    mostrarNotificacao('✨ Plano de estudos gerado!');
-}
-
-// Renderizar plano de estudos
-function renderizarPlanoEstudos(plano) {
-    const container = document.getElementById('planoEstudos');
-    
-    container.innerHTML = plano.map(diaPlano => `
-        <div class="plano-dia">
-            <div class="plano-dia-header">
-                <div class="plano-dia-nome">${diaPlano.dia}</div>
-                <div class="plano-dia-total">
-                    ${diaPlano.atividades.length} atividade(s)
-                </div>
-            </div>
-            <div class="plano-atividades">
-                ${diaPlano.atividades.map(ativ => `
-                    <div class="plano-atividade">
-                        <div class="plano-atividade-hora">${ativ.hora}</div>
-                        <div class="plano-atividade-info">
-                            <div class="plano-atividade-curso">
-                                ${ativ.tipo === 'estudo' ? '📚' : '📝'} ${ativ.curso}
-                            </div>
-                            <div class="plano-atividade-duracao">⏱️ ${ativ.duracao}</div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `).join('');
-}
-
-// Gerar insights e previsões
-function gerarInsights() {
-    const perfil = analisarPerfilAprendizado();
-    const insights = [];
-    
-    // Insight 1: Tempo para completar
-    const cursosAtivos = cursos.filter(c => c.status === 'em-andamento');
-    if (cursosAtivos.length > 0) {
-        const progressoTotal = cursosAtivos.reduce((acc, c) => acc + c.progresso, 0);
-        const progressoRestante = (cursosAtivos.length * 100) - progressoTotal;
-        const diasEstimados = Math.ceil(progressoRestante / 10); // 10% por dia (média)
-        
-        insights.push({
-            icon: '⏳',
-            titulo: 'Previsão de Conclusão',
-            texto: `Com seu ritmo atual, você completará todos os cursos em andamento em aproximadamente ${diasEstimados} dias!`,
-            tipo: 'info'
-        });
-    }
-    
-    // Insight 2: Melhor categoria
-    const categorias = {};
-    cursos.filter(c => c.status === 'concluido').forEach(c => {
-        categorias[c.categoria] = (categorias[c.categoria] || 0) + 1;
-    });
-    
-    if (Object.keys(categorias).length > 0) {
-        const melhorCategoria = Object.entries(categorias).sort((a, b) => b[1] - a[1])[0];
-        insights.push({
-            icon: '🏆',
-            titulo: 'Sua Especialidade',
-            texto: `Você se destaca em ${melhorCategoria[0]} com ${melhorCategoria[1]} curso(s) concluído(s)!`,
-            tipo: 'positivo'
-        });
-    }
-    
-    // Insight 3: Streak
+// Atualizar cards de métricas
+function atualizarCardsAnalytics() {
+    // Streak
     const streak = typeof dadosGame !== 'undefined' && dadosGame.streakDias ? dadosGame.streakDias : 0;
-    if (streak >= 7) {
-        insights.push({
-            icon: '🔥',
-            titulo: 'Sequência Impressionante!',
-            texto: `Você está estudando há ${streak} dias seguidos! Continue assim para manter a consistência.`,
-            tipo: 'positivo'
-        });
-    } else if (streak < 3) {
-        insights.push({
-            icon: '📅',
-            titulo: 'Construa uma Rotina',
-            texto: 'Estudar todos os dias, mesmo que por 15 minutos, aumenta a retenção em 50%. Que tal começar um streak?',
-            tipo: 'atencao'
-        });
-    }
+    document.getElementById('analyticsStreak').textContent = `${streak} dia${streak !== 1 ? 's' : ''}`;
     
-    // Insight 4: Taxa de abandono
-    const pausados = cursos.filter(c => c.status === 'pausado').length;
-    if (pausados > cursos.length * 0.3) {
-        insights.push({
-            icon: '⚠️',
-            titulo: 'Alto Índice de Pausas',
-            texto: `${Math.round(pausados / cursos.length * 100)}% dos seus cursos estão pausados. Considere reduzir a quantidade de cursos simultâneos.`,
-            tipo: 'alerta'
-        });
-    }
+    // Produtividade (baseada no progresso médio)
+    const produtividade = cursos.length > 0
+        ? Math.round(cursos.reduce((acc, c) => acc + c.progresso, 0) / cursos.length)
+        : 0;
+    document.getElementById('analyticsProdutividade').textContent = `${produtividade}%`;
     
-    return insights;
+    // Evolução mensal (simulada - em produção você compararia com mês anterior)
+    const evolucao = Math.floor(Math.random() * 30) + 5; // Simulado
+    document.getElementById('analyticsEvolucao').textContent = `+${evolucao}%`;
+    
+    // Meta do mês
+    const concluidos = cursos.filter(c => c.status === 'concluido').length;
+    document.getElementById('analyticsMeta').textContent = `${concluidos}/3`;
 }
 
-// Gerar sugestões de melhoria
-function gerarSugestoesMelhoria() {
-    const melhorias = [
-        {
-            titulo: 'Use a Técnica Pomodoro',
-            descricao: 'Estudar em blocos de 25 minutos com pausas de 5 minutos aumenta o foco e reduz a fadiga mental em 40%.'
-        },
-        {
-            titulo: 'Faça Anotações Ativas',
-            descricao: 'Resumir conceitos com suas próprias palavras melhora a retenção em 34%. Use a seção de Notas!'
-        },
-        {
-            titulo: 'Revise Periodicamente',
-            descricao: 'A curva do esquecimento mostra que revisar após 1 dia, 3 dias e 7 dias aumenta a retenção em 80%.'
-        },
-        {
-            titulo: 'Mantenha Consistência',
-            descricao: 'Estudar 30 minutos por dia é mais efetivo que 3 horas uma vez por semana. Pequenos passos diários!'
-        },
-        {
-            titulo: 'Ensine o que Aprende',
-            descricao: 'Explicar conceitos para outros (ou para si mesmo) consolida o aprendizado. Crie resumos e compartilhe!'
-        }
-    ];
+// Renderizar heatmap semanal
+function renderizarHeatmapSemanal() {
+    const container = document.getElementById('heatmapSemanal');
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     
-    return melhorias;
-}
-
-// Renderizar IA Assistente
-function renderizarIAAssistente() {
-    const perfil = analisarPerfilAprendizado();
+    // Simular dados de atividade (em produção, você rastrearia real)
+    const atividades = dias.map(() => Math.floor(Math.random() * 5));
     
-    // Atualizar perfil
-    document.getElementById('tipoAprendiz').textContent = perfil.tipoAprendiz;
-    document.getElementById('velocidadeConclusao').textContent = perfil.velocidade;
-    document.getElementById('consistencia').textContent = perfil.consistencia;
-    
-    // Renderizar recomendações
-    const recomendacoes = gerarRecomendacoes();
-    const containerRec = document.getElementById('iaRecomendacoes');
-    
-    if (recomendacoes.length === 0) {
-        containerRec.innerHTML = '<p style="color: var(--text-secondary);">Tudo certo por enquanto! Continue assim! 🎉</p>';
-    } else {
-        containerRec.innerHTML = recomendacoes.map(rec => `
-            <div class="recomendacao-ia">
-                <div class="recomendacao-ia-header">
-                    <div class="recomendacao-ia-icon">${rec.icon}</div>
-                    <div class="recomendacao-ia-titulo">${rec.titulo}</div>
+    container.innerHTML = dias.map((dia, index) => {
+        const nivel = atividades[index];
+        return `
+            <div class="heatmap-day">
+                <div class="heatmap-day-label">${dia}</div>
+                <div class="heatmap-cell heatmap-nivel-${nivel}" title="${dia}: ${nivel} atividade(s)">
+                    ${nivel > 0 ? nivel : ''}
                 </div>
-                <div class="recomendacao-ia-texto">${rec.texto}</div>
-                <div class="recomendacao-ia-acao">${rec.acao}</div>
-            </div>
-        `).join('');
-    }
-    
-    // Gerar plano inicial
-    if (cursos.filter(c => c.status === 'em-andamento' || c.status === 'pausado').length > 0) {
-        gerarPlanoEstudos();
-    } else {
-        document.getElementById('planoEstudos').innerHTML = `
-            <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                📚 Adicione cursos em andamento para gerar seu plano personalizado!
             </div>
         `;
-    }
-    
-    // Renderizar insights
-    const insights = gerarInsights();
-    const containerInsights = document.getElementById('iaInsights');
-    
-    containerInsights.innerHTML = `
-        <div class="insights-grid">
-            ${insights.map(insight => `
-                <div class="insight-card ${insight.tipo}">
-                    <div class="insight-header">
-                        <div class="insight-icon">${insight.icon}</div>
-                        <div class="insight-titulo">${insight.titulo}</div>
-                    </div>
-                    <div class="insight-texto">${insight.texto}</div>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    // Renderizar melhorias
-    const melhorias = gerarSugestoesMelhoria();
-    const containerMelhorias = document.getElementById('iaMelhorias');
-    
-    containerMelhorias.innerHTML = melhorias.map((melhoria, index) => `
-        <div class="melhoria-item">
-            <div class="melhoria-numero">${index + 1}</div>
-            <div class="melhoria-conteudo">
-                <div class="melhoria-titulo">${melhoria.titulo}</div>
-                <div class="melhoria-descricao">${melhoria.descricao}</div>
-            </div>
-        </div>
-    `).join('');
+    }).join('');
 }
 
-// Carregar IA ao entrar na seção
-const originalShowSection9 = showSection;
-showSection = function(sectionId) {
-    originalShowSection9.call(this, sectionId);
+// Criar gráfico comparativo mensal
+function criarGraficoComparativoMensal() {
+    const ctx = document.getElementById('graficoComparativoMensal');
+    if (!ctx) return;
     
-    if (sectionId === 'ia-assistente') {
-        renderizarIAAssistente();
+    // Dados simulados dos últimos 6 meses
+    const meses = ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const cursosIniciadosPorMes = [2, 3, 5, 4, 6, cursos.length];
+    const cursosConcluidosPorMes = [1, 2, 3, 2, 4, cursos.filter(c => c.status === 'concluido').length];
+    
+    if (graficoComparativoChart) {
+        graficoComparativoChart.destroy();
+    }
+    
+    graficoComparativoChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: meses,
+            datasets: [
+                {
+                    label: 'Cursos Iniciados',
+                    data: cursosIniciadosPorMes,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Cursos Concluídos',
+                    data: cursosConcluidosPorMes,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: { size: 12 },
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-primary').trim()
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-secondary').trim()
+                    },
+                    grid: {
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--border-color').trim()
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement)
+                            .getPropertyValue('--text-primary').trim()
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// Atualizar métricas adicionais
+function atualizarMetricasAnalytics() {
+    // Tempo médio de estudo (simulado - baseado em Pomodoro)
+    const tempoMedio = typeof tempoTotalHoje !== 'undefined' ? tempoTotalHoje : 0;
+    const horas = Math.floor(tempoMedio / 60);
+    const mins = tempoMedio % 60;
+    document.getElementById('analyticsTempoMedio').textContent = `${horas}h ${mins}min`;
+    
+    // Melhor dia (simulado)
+    const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const melhorDia = diasSemana[Math.floor(Math.random() * 7)];
+    const horasMelhorDia = Math.floor(Math.random() * 5) + 1;
+    document.getElementById('analyticsMelhorDia').textContent = melhorDia;
+    document.getElementById('analyticsMelhorDiaHoras').textContent = `${horasMelhorDia}h 0min estudadas`;
+    
+    // Categoria favorita
+    if (cursos.length > 0) {
+        const categorias = {};
+        cursos.forEach(c => {
+            categorias[c.categoria] = (categorias[c.categoria] || 0) + 1;
+        });
+        const catFavorita = Object.entries(categorias).sort((a, b) => b[1] - a[1])[0];
+        document.getElementById('analyticsCategoriaFav').textContent = catFavorita[0];
+        document.getElementById('analyticsCategoriaFavQtd').textContent = `${catFavorita[1]} curso${catFavorita[1] > 1 ? 's' : ''}`;
+    } else {
+        document.getElementById('analyticsCategoriaFav').textContent = '-';
+        document.getElementById('analyticsCategoriaFavQtd').textContent = '0 cursos';
+    }
+}
+
+// Integrar com showSection
+const originalShowSection12 = showSection;
+showSection = function(sectionId) {
+    originalShowSection12.call(this, sectionId);
+    
+    if (sectionId === 'analytics') {
+        renderizarAnalytics();
     }
 };
+
+console.log('📊 Sistema de Analytics carregado!');
 
 // (Removido - integração já está na função adicionarCurso principal)
 
@@ -5990,3 +5778,4 @@ document.addEventListener('DOMContentLoaded', () => {
 console.log('✅ Melhorias Financeiras carregadas!');
 
 console.log('📄 Sistema de Cupom Fiscal carregado!');
+

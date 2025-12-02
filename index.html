@@ -192,19 +192,73 @@
             </div>
         </div>
 
-        <div class="nav">
-            <button class="nav-btn active" onclick="showSection('inicio')">Início</button>
-            <button class="nav-btn" onclick="showSection('cursos')">Meus Cursos</button>
-            <button class="nav-btn" onclick="showSection('trilhas')">Trilhas Sugeridas</button>
-            <button class="nav-btn" onclick="showSection('pomodoro')">⏱️ Pomodoro</button>
-            <button class="nav-btn" onclick="showSection('notas')">📝 Notas</button>
-            <button class="nav-btn" onclick="showSection('ferramentas')">🤖 IA Premium</button>
-            <button class="nav-btn" onclick="showSection('gamificacao')">🏆 Gamificação</button>
-            <button class="nav-btn" onclick="showSection('biblioteca')">📚 Biblioteca</button>
-            <button class="nav-btn" onclick="showSection('ia-assistente')">🧠 IA Assistente</button>
-            <button class="nav-btn" onclick="showSection('certificados')">🎓 Certificados</button>
-            <button class="nav-btn" onclick="showSection('financeiro')">💰 Financeiro</button>
-            <button class="nav-btn" onclick="showSection('dados')">💾 Dados</button>
+        <div class="nav-container">
+            <!-- Navegação Principal (sempre visível) -->
+            <div class="nav nav-principal">
+                <button class="nav-btn active" onclick="showSection('inicio')">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Início</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('cursos')">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-label">Cursos</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('trilhas')">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-label">Trilhas</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('analytics')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Analytics</span>
+                </button>
+            </div>
+
+            <!-- Menu Dropdown para outras seções -->
+            <div class="nav-dropdown">
+                <button class="nav-dropdown-btn" onclick="toggleNavDropdown()">
+                    <span class="nav-icon">⚡</span>
+                    <span class="nav-label">Ferramentas</span>
+                    <span class="dropdown-arrow-nav">▼</span>
+                </button>
+
+                <div class="nav-dropdown-menu hidden" id="navDropdownMenu">
+                    <button class="nav-dropdown-item" onclick="showSection('pomodoro'); closeNavDropdown();">
+                        <span class="nav-icon">⏱️</span>
+                        <span>Pomodoro</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('notas'); closeNavDropdown();">
+                        <span class="nav-icon">📝</span>
+                        <span>Notas</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('biblioteca'); closeNavDropdown();">
+                        <span class="nav-icon">📖</span>
+                        <span>Biblioteca</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('ferramentas'); closeNavDropdown();">
+                        <span class="nav-icon">🤖</span>
+                        <span>IA Premium</span>
+                    </button>
+
+                    <div class="nav-divider"></div>
+
+                    <button class="nav-dropdown-item" onclick="showSection('gamificacao'); closeNavDropdown();">
+                        <span class="nav-icon">🏆</span>
+                        <span>Gamificação</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('certificados'); closeNavDropdown();">
+                        <span class="nav-icon">🎓</span>
+                        <span>Certificados</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('financeiro'); closeNavDropdown();">
+                        <span class="nav-icon">💰</span>
+                        <span>Financeiro</span>
+                    </button>
+                    <button class="nav-dropdown-item" onclick="showSection('dados'); closeNavDropdown();">
+                        <span class="nav-icon">💾</span>
+                        <span>Backup</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="content">
@@ -651,72 +705,76 @@
                 </div>
             </div>
 
-            <!-- IA ASSISTENTE -->
-            <div id="ia-assistente" class="section">
-                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">🧠 IA Assistente de Estudos
-                </h2>
+            <!-- ANALYTICS (NOVA SEÇÃO) -->
+            <div id="analytics" class="section">
+                <h2 style="margin-bottom: 30px; color: #3b82f6; text-align: center;">📊 Dashboard Analytics</h2>
 
-                <!-- ANÁLISE DO PERFIL -->
-                <div class="ia-perfil-card">
-                    <div class="ia-perfil-header">
-                        <div class="ia-avatar">🤖</div>
-                        <div>
-                            <h3>Seu Perfil de Aprendizado</h3>
-                            <p>Análise baseada em seus dados e padrões</p>
+                <!-- Cards de Métricas -->
+                <div class="analytics-cards">
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">🔥</div>
+                        <div class="analytics-card-info">
+                            <div class="analytics-card-label">Streak Atual</div>
+                            <div class="analytics-card-value" id="analyticsStreak">0 dias</div>
                         </div>
                     </div>
-                    <div class="ia-perfil-stats">
-                        <div class="ia-stat">
-                            <div class="ia-stat-icon">🎯</div>
-                            <div class="ia-stat-info">
-                                <div class="ia-stat-label">Tipo de Aprendiz</div>
-                                <div class="ia-stat-value" id="tipoAprendiz">Analisando...</div>
-                            </div>
+
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">⚡</div>
+                        <div class="analytics-card-info">
+                            <div class="analytics-card-label">Produtividade</div>
+                            <div class="analytics-card-value" id="analyticsProdutividade">0%</div>
                         </div>
-                        <div class="ia-stat">
-                            <div class="ia-stat-icon">⚡</div>
-                            <div class="ia-stat-info">
-                                <div class="ia-stat-label">Velocidade de Conclusão</div>
-                                <div class="ia-stat-value" id="velocidadeConclusao">Analisando...</div>
-                            </div>
+                    </div>
+
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">📈</div>
+                        <div class="analytics-card-info">
+                            <div class="analytics-card-label">Evolução Mensal</div>
+                            <div class="analytics-card-value" id="analyticsEvolucao">+0%</div>
                         </div>
-                        <div class="ia-stat">
-                            <div class="ia-stat-icon">📊</div>
-                            <div class="ia-stat-info">
-                                <div class="ia-stat-label">Consistência</div>
-                                <div class="ia-stat-value" id="consistencia">Analisando...</div>
-                            </div>
+                    </div>
+
+                    <div class="analytics-card">
+                        <div class="analytics-card-icon">🎯</div>
+                        <div class="analytics-card-info">
+                            <div class="analytics-card-label">Meta do Mês</div>
+                            <div class="analytics-card-value" id="analyticsMeta">0/3</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- RECOMENDAÇÕES PERSONALIZADAS -->
-                <div class="ia-recomendacoes">
-                    <h3>💡 Recomendações Personalizadas</h3>
-                    <div id="iaRecomendacoes"></div>
+                <!-- Gráfico de Atividade Semanal -->
+                <div class="analytics-section">
+                    <h3>📅 Atividade da Semana</h3>
+                    <div class="heatmap-container" id="heatmapSemanal"></div>
                 </div>
 
-                <!-- PLANO DE ESTUDOS -->
-                <div class="ia-plano">
-                    <div class="ia-plano-header">
-                        <h3>📅 Seu Plano de Estudos Inteligente</h3>
-                        <button class="btn-gerar-plano" onclick="gerarPlanoEstudos()">
-                            ✨ Gerar Novo Plano
-                        </button>
+                <!-- Comparativo Mensal -->
+                <div class="analytics-section">
+                    <h3>📊 Comparativo Mensal</h3>
+                    <canvas id="graficoComparativoMensal"></canvas>
+                </div>
+
+                <!-- Tempo Médio de Estudo -->
+                <div class="analytics-grid">
+                    <div class="analytics-box">
+                        <h4>⏱️ Tempo Médio de Estudo</h4>
+                        <div class="analytics-big-number" id="analyticsTempoMedio">0h 0min</div>
+                        <p class="analytics-desc">por dia nos últimos 7 dias</p>
                     </div>
-                    <div id="planoEstudos"></div>
-                </div>
 
-                <!-- INSIGHTS E PREVISÕES -->
-                <div class="ia-insights">
-                    <h3>🔮 Insights e Previsões</h3>
-                    <div id="iaInsights"></div>
-                </div>
+                    <div class="analytics-box">
+                        <h4>🏆 Melhor Dia</h4>
+                        <div class="analytics-big-number" id="analyticsMelhorDia">Domingo</div>
+                        <p class="analytics-desc" id="analyticsMelhorDiaHoras">0h 0min estudadas</p>
+                    </div>
 
-                <!-- SUGESTÕES DE MELHORIA -->
-                <div class="ia-melhorias">
-                    <h3>🚀 Como Melhorar Seus Estudos</h3>
-                    <div id="iaMelhorias"></div>
+                    <div class="analytics-box">
+                        <h4>📚 Categoria Favorita</h4>
+                        <div class="analytics-big-number" id="analyticsCategoriaFav">-</div>
+                        <p class="analytics-desc" id="analyticsCategoriaFavQtd">0 cursos</p>
+                    </div>
                 </div>
             </div>
 
